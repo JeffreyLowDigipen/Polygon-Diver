@@ -6,18 +6,27 @@ import android.view.View
 import com.example.projectpolygondiver.GameObjects.Player
 import org.joml.Vector2f
 import org.joml.Vector3f
+import kotlin.math.atan2
 import kotlin.math.sqrt
+import android.view.KeyEvent
+import androidx.core.view.KeyEventDispatcher.dispatchKeyEvent
+import android.app.Activity
+//import java.lang.ref.WeakReference
 
 object InputManager : View.OnTouchListener {
 
     private var isTouching = false
     private var screenCenter = Vector2f() // Center of the screen
     private var currentTouchPosition = Vector2f()
-
+    //private var activity: WeakReference<Activity>? = null
     // Sensitivity and speed cap
     private val sensitivity = 0.01f
     private var currentVelocity = Vector3f()
 
+//    // Function to initialize the InputManager with the activity
+//    fun setActivity(currentActivity: Activity) {
+//        activity = WeakReference(currentActivity)
+//    }
     // Set screen dimensions when initialized
     fun setScreenDimensions(screenWidth: Int, screenHeight: Int) {
         screenCenter.set(screenWidth / 2f, screenHeight / 2f)
@@ -51,7 +60,19 @@ object InputManager : View.OnTouchListener {
 
         currentVelocity.set(GameObjectManager.Player?.let { deltaVector.mul(it.movementSpeed) },0f)
 
+        // Calculate the angle (in radians) and convert to degrees
 
+        val angleInRadians = atan2(-deltaVector.x, deltaVector.y) // atan2(y, x) gives angle from center
+        val angleInDegrees = Math.toDegrees(angleInRadians.toDouble()).toFloat() +180f
+
+        // Normalize the angle (0° - 360°)
+        val normalizedAngle = if (angleInDegrees < 0) angleInDegrees + 360f else angleInDegrees
+
+        // Update the target rotation angle
+        GameObjectManager.Player?.let { player ->
+            (player as? Player)?.setTargetRotation(normalizedAngle)
+        }
+      //  Log.d("Player", "NormalizedAngle: ${normalizedAngle}")
     }
 
 
@@ -65,7 +86,9 @@ object InputManager : View.OnTouchListener {
             // Move player
             GameObjectManager.Player?.let { player ->
                 (player as? Player)?.onMove(movement)
+                    //(player as? Player)?.rotateTowardsTouch(movement, deltaTime)
             }
         }
     }
+
 }

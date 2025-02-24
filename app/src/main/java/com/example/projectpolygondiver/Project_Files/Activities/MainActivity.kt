@@ -8,6 +8,7 @@ import android.opengl.GLSurfaceView
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -29,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "Launch OPENGL")
+
 
         // Request permission first
         if (checkStoragePermission()) {
@@ -83,13 +85,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun initializeGame() {
 
-            initializeGameAssets()
+        initializeGameAssets()
 
     }
 
     fun initializeGameAssets() {
 
-       // val objLoader = OBJLoader(this@MainActivity)
+        // val objLoader = OBJLoader(this@MainActivity)
         //objLoader.Init()
         //  objLoader.generatePrimitiveCube()
 
@@ -103,13 +105,14 @@ class MainActivity : AppCompatActivity() {
         )
 
         val player = Player().apply {
-            modelName = "cube"
+            modelName = "Chicken_Obj"
             position = Vector3f(0f, 0f, 0f)
-            scale = Vector3f(0.4f, 0.6f, 0.4f)
+            rotation = Vector3f(90f, 0f, 0f)
+            scale = Vector3f(0.1f, 0.1f, 0.1f)
             color = Vector3f(1f, 1f, 1f)
-            //textureName="Chicken_Tx"
+            textureName = "Chicken_Tx"
             type = GameObject.GOType.PLAYER
-            movementSpeed=2f
+            movementSpeed = 2f
         }
 
         val Enemy = GameObject().apply {
@@ -118,13 +121,13 @@ class MainActivity : AppCompatActivity() {
             scale = Vector3f(0.4f, 0.6f, 0.4f)
             color = Vector3f(1f, 1f, 1f)
             type = GameObject.GOType.ENEMY
-            movementSpeed=2f
+            movementSpeed = 2f
         }
 
         val background = GameObject().apply {
             modelName = "plane"
             position = Vector3f(0f, 0f, -1f)
-            scale = backgroundScale.mul(50f);
+            scale = backgroundScale.mul(1f);
             color = Vector3f(0.01f, 0.01f, 0.01f)
             textureName = "background"
             type = GameObject.GOType.DEFAULT
@@ -147,7 +150,23 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
+
+    // Function to simulate a key press safely
+    fun simulateKeyPress(keyCode: Int) {
+
+
+        if (this != null) {
+            val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keyCode)
+            val upEvent = KeyEvent(KeyEvent.ACTION_UP, keyCode)
+
+            this.dispatchKeyEvent(downEvent)
+            this.dispatchKeyEvent(upEvent)
+        } else {
+            Log.e("InputManager", "Activity reference lost. Cannot simulate key press.")
+        }
+    }
 }
+
 
 
 

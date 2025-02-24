@@ -9,6 +9,7 @@ object GameObjectManager {
     private val deleteObjects: MutableList<GameObject> = mutableListOf()
     private val addObjects: MutableList<GameObject> = mutableListOf()
 
+    private var enemySpawner : EnemySpawner = EnemySpawner;
 
     public var frameCount = 0
     public var fps = 0
@@ -67,15 +68,13 @@ object GameObjectManager {
                 }
             }
         }
-        // Update all game objects (called every frame)
-        fun update(deltaTime: Float) {
-            // for (gameObject in gameObjects) {
-            //    gameObject.update(deltaTime)
-            // }
 
-            // removeGameObjectOnPostUpdate();
-        }
 
 
     }
+    // Update all game objects (called every frame)
+    public fun update(deltaTime: Float) {
+        enemySpawner.update(deltaTime)
+    }
+
 }

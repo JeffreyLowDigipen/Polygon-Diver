@@ -18,11 +18,12 @@ class OBJLoader(private val context: Context) {
 
     lateinit var vertices: FloatBuffer
     lateinit var textureCoords: FloatBuffer
-
+    lateinit var normals: FloatBuffer
     // Global caches for model data and textures
     companion object {
         val modelVertices = mutableMapOf<String, FloatBuffer>()
         val modelTextureCoords = mutableMapOf<String, FloatBuffer>()
+        val modelNormals = mutableMapOf<String, FloatBuffer>() // New cache for normals
         val loadedTextures = mutableMapOf<String, Int>() // Cache textures using their file path as keys
     }
 
@@ -36,111 +37,123 @@ class OBJLoader(private val context: Context) {
         listAssetFiles(context, "Textures")  // Lists files inside the Textures folder
         loadTexture("Textures/background.jpg")
         loadTexture("Textures/Chicken_Tx.jpg")
+        loadModel("Models/Chicken_Obj.obj")
 
     }
-    // Load a model and cache data
     fun loadModel(modelName: String) {
-        // Check if model data is already cached
         if (modelVertices.containsKey(modelName.trim())) {
             Log.d("OBJLoader", "Model data loaded from cache: $modelName")
             vertices = modelVertices[modelName]!!
             textureCoords = modelTextureCoords[modelName]!!
+            normals = modelNormals[modelName]!!
             return
         }
 
-        // Initialize local lists
         val vertexList = mutableListOf<Float>()
         val textureList = mutableListOf<Float>()
+        val normalList = mutableListOf<Float>()
         val faceList = mutableListOf<Int>()
         val texCoordList = mutableListOf<Int>()
+        val normalIndexList = mutableListOf<Int>()
 
-        // Load model from assets
+        // Read .obj file
         val inputStream = context.assets.open(modelName)
         val reader = BufferedReader(InputStreamReader(inputStream))
 
         reader.forEachLine { line ->
             val parts = line.trim().split("\\s+".toRegex())
             when (parts[0]) {
-                "v" -> { // Vertex positions
-                    val x = parts[1].toFloat()
-                    val y = parts[2].toFloat()
-                    val z = parts[3].toFloat()
-                    vertexList.addAll(listOf(x, y, z))
+                "v" -> {
+                    vertexList.add(parts[1].toFloat())
+                    vertexList.add(parts[2].toFloat())
+                    vertexList.add(parts[3].toFloat())
                 }
-
-                "vt" -> { // Texture coordinates
-                    if (parts.size >= 3) {
-                        textureList.add(parts[1].toFloat())
-                        textureList.add(1.0f - parts[2].toFloat())
-                    } else {
-                        textureList.add(0.0f)
-                        textureList.add(0.0f)
-                    }
+                "vt" -> {
+                    textureList.add(parts[1].toFloat())
+                    textureList.add(parts[2].toFloat())
                 }
+                "vn" -> { // Normal vectors
+                    normalList.add(parts[1].toFloat())
+                    normalList.add(parts[2].toFloat())
+                    normalList.add(parts[3].toFloat())
+                }
+                "f" -> {
+                    if (parts.size >= 4) {
+                        // Triangulate faces (Assuming fan triangulation for quads or more)
+                        val indices = parts.subList(1, parts.size).map { it.split("/") }
+                        for (i in 1 until indices.size - 1) {
+                            val triangle = listOf(indices[0], indices[i], indices[i + 1])
+                            triangle.forEach { index ->
+                                val vertexIndex = index[0].toInt() - 1
+                                val texCoordIndex = if (index.size > 1 && index[1].isNotEmpty()) index[1].toInt() - 1 else 0
+                                val normalIndex = if (index.size > 2 && index[2].isNotEmpty()) index[2].toInt() - 1 else 0
 
-                "f" -> { // Faces
-                    if (parts.size == 4) {
-                        for (i in 1..3) {
-                            val indices = parts[i].split("/")
-                            faceList.add(indices[0].toInt() - 1)
-                            texCoordList.add(if (indices.size > 1 && indices[1].isNotEmpty()) indices[1].toInt() - 1 else 0)
+                                faceList.add(vertexIndex)
+                                texCoordList.add(texCoordIndex)
+                                normalIndexList.add(normalIndex)
+                            }
                         }
                     }
                 }
+
             }
         }
 
-        if (vertexList.isEmpty() || faceList.isEmpty()) {
-            Log.e("OBJLoader", "Model loading failed: Empty vertex or face list")
-            return
-        }
-
-        initializeBuffers(modelName, vertexList, textureList, faceList, texCoordList)
+        initializeBuffers(modelName, vertexList, textureList, normalList, faceList, texCoordList, normalIndexList)
     }
 
-    // Initialize vertex and texture buffers and cache them
+
+
+    // Initialize buffers with normals
     private fun initializeBuffers(
         modelName: String,
         vertexList: List<Float>,
         textureList: List<Float>,
+        normalList: List<Float>,
         faceList: List<Int>,
-        texCoordList: List<Int>
+        texCoordList: List<Int>,
+        normalIndexList: List<Int>
     ) {
         val vertexData = FloatArray(faceList.size * 3)
+        val textureData = FloatArray(texCoordList.size * 2)
+        val normalData = FloatArray(normalIndexList.size * 3)
+
         for (i in faceList.indices) {
             val vertexIndex = faceList[i] * 3
             vertexData[i * 3] = vertexList[vertexIndex]
             vertexData[i * 3 + 1] = vertexList[vertexIndex + 1]
             vertexData[i * 3 + 2] = vertexList[vertexIndex + 2]
-        }
 
-        vertices = ByteBuffer.allocateDirect(vertexData.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        vertices.put(vertexData).position(0)
-
-        val textureData = FloatArray(texCoordList.size * 2)
-        for (i in texCoordList.indices) {
             val texIndex = texCoordList[i] * 2
             textureData[i * 2] = textureList[texIndex]
             textureData[i * 2 + 1] = textureList[texIndex + 1]
+
+            val normIndex = normalIndexList[i] * 3
+            normalData[i * 3] = normalList[normIndex]
+            normalData[i * 3 + 1] = normalList[normIndex + 1]
+            normalData[i * 3 + 2] = normalList[normIndex + 2]
         }
 
-        textureCoords = ByteBuffer.allocateDirect(textureData.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        textureCoords.put(textureData).position(0)
+        // Create buffers
+        vertices = ByteBuffer.allocateDirect(vertexData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(vertexData).position(0)
+        }
 
-        // Remove directory path and file extension from model name
+        textureCoords = ByteBuffer.allocateDirect(textureData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(textureData).position(0)
+        }
+
+        normals = ByteBuffer.allocateDirect(normalData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(normalData).position(0)
+        }
+
+        // Cache buffers
         val trimmedModelName = modelName.substringAfterLast("/").substringBeforeLast(".")
-
         modelVertices[trimmedModelName] = vertices
         modelTextureCoords[trimmedModelName] = textureCoords
+        modelNormals[trimmedModelName] = normals // Store normals
 
-        Log.d("OBJLoader", "Model loaded and cached: $trimmedModelName")
-
-
-
+        Log.d("OBJLoader", "Model loaded and cached: $trimmedModelName with normals")
     }
 
     // Load texture and cache it globally
@@ -175,8 +188,11 @@ class OBJLoader(private val context: Context) {
         // Bind the texture and set its parameters
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureIds[0])
 
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_REPEAT)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_REPEAT)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+
 
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, flippedBitmap, 0)
         flippedBitmap.recycle()
@@ -226,7 +242,6 @@ class OBJLoader(private val context: Context) {
             return
         }
 
-        // Define a square in 3D space for sprite rendering
         val halfSize = 1f / 2f
         val vertexData = floatArrayOf(
             -halfSize, halfSize, 0f,  // Top-left
@@ -236,21 +251,29 @@ class OBJLoader(private val context: Context) {
         )
 
         val textureData = floatArrayOf(
-            0f, 0f,  // Top-left
-            1f, 0f,  // Top-right
-            0f, 1f,  // Bottom-left
-            1f, 1f   // Bottom-right
+            0f, 1f,  // Top-left (flipped vertically for OpenGL)
+            1f, 1f,  // Top-right
+            0f, 0f,  // Bottom-left
+            1f, 0f   // Bottom-right
         )
 
-        // Define indices for two triangles
+        val normalData = floatArrayOf(
+            0f, 0f, -1f, // Top-left (facing the opposite direction)
+            0f, 0f, -1f, // Top-right
+            0f, 0f, -1f, // Bottom-left
+            0f, 0f, -1f  // Bottom-right
+        )
+
+
         val indices = intArrayOf(
-            0, 1, 2,  // First triangle (Top-left, Top-right, Bottom-left)
-            1, 3, 2   // Second triangle (Top-right, Bottom-right, Bottom-left)
+            0, 2, 1,  // First triangle (Counter-clockwise order)
+            1, 2, 3   // Second triangle
         )
 
         // Convert arrays into buffers
         val finalVertexData = FloatArray(indices.size * 3)
         val finalTextureData = FloatArray(indices.size * 2)
+        val finalNormalData = FloatArray(indices.size * 3)
 
         for (i in indices.indices) {
             val vertexIndex = indices[i] * 3
@@ -261,21 +284,30 @@ class OBJLoader(private val context: Context) {
             val texIndex = indices[i] * 2
             finalTextureData[i * 2] = textureData[texIndex]
             finalTextureData[i * 2 + 1] = textureData[texIndex + 1]
+
+            val normIndex = indices[i] * 3
+            finalNormalData[i * 3] = normalData[normIndex]
+            finalNormalData[i * 3 + 1] = normalData[normIndex + 1]
+            finalNormalData[i * 3 + 2] = normalData[normIndex + 2]
         }
 
-        vertices = ByteBuffer.allocateDirect(finalVertexData.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        vertices.put(finalVertexData).position(0)
+        // Create buffers
+        vertices = ByteBuffer.allocateDirect(finalVertexData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(finalVertexData).position(0)
+        }
 
-        textureCoords = ByteBuffer.allocateDirect(finalTextureData.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-        textureCoords.put(finalTextureData).position(0)
+        textureCoords = ByteBuffer.allocateDirect(finalTextureData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(finalTextureData).position(0)
+        }
+
+        normals = ByteBuffer.allocateDirect(finalNormalData.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+            put(finalNormalData).position(0)
+        }
 
         // Cache the primitive model
         modelVertices["plane"] = vertices
         modelTextureCoords["plane"] = textureCoords
+        modelNormals["plane"] = normals
 
         Log.d("OBJLoader", "Primitive model generated and cached: plane")
     }
@@ -289,16 +321,16 @@ class OBJLoader(private val context: Context) {
         val halfSize = 1f / 2f
         val vertexData = floatArrayOf(
             // Front face
-            -halfSize, -halfSize,  halfSize, // Bottom-left
-            halfSize, -halfSize,  halfSize, // Bottom-right
-            halfSize,  halfSize,  halfSize, // Top-right
-            -halfSize,  halfSize,  halfSize, // Top-left
+            -halfSize, -halfSize, halfSize,  // Bottom-left
+            halfSize, -halfSize, halfSize,   // Bottom-right
+            halfSize, halfSize, halfSize,    // Top-right
+            -halfSize, halfSize, halfSize,   // Top-left
 
             // Back face
             -halfSize, -halfSize, -halfSize,
             halfSize, -halfSize, -halfSize,
-            halfSize,  halfSize, -halfSize,
-            -halfSize,  halfSize, -halfSize
+            halfSize, halfSize, -halfSize,
+            -halfSize, halfSize, -halfSize
         )
 
         val textureData = floatArrayOf(
@@ -308,7 +340,14 @@ class OBJLoader(private val context: Context) {
             0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f
         )
 
-        // Define the indices for drawing triangles (two per face)
+        val normalData = floatArrayOf(
+            // Front face (flipped)
+            0f, 0f, -1f, 0f, 0f, -1f, 0f, 0f, -1f, 0f, 0f, -1f,
+            // Back face
+            0f, 0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f
+        )
+
+
         val indices = intArrayOf(
             // Front face
             0, 1, 2, 0, 2, 3,
@@ -324,9 +363,10 @@ class OBJLoader(private val context: Context) {
             4, 5, 1, 4, 1, 0
         )
 
-        // Create buffers for vertices and texture coordinates
+        // Convert arrays into buffers
         val finalVertexData = FloatArray(indices.size * 3)
         val finalTextureData = FloatArray(indices.size * 2)
+        val finalNormalData = FloatArray(indices.size * 3)
 
         for (i in indices.indices) {
             val vertexIndex = indices[i] * 3
@@ -334,12 +374,16 @@ class OBJLoader(private val context: Context) {
             finalVertexData[i * 3 + 1] = vertexData[vertexIndex + 1]
             finalVertexData[i * 3 + 2] = vertexData[vertexIndex + 2]
 
-            val texIndex = indices[i] * 2
+            val texIndex = (indices[i] % 4) * 2 // Wrap texture coordinates for each face
             finalTextureData[i * 2] = textureData[texIndex]
             finalTextureData[i * 2 + 1] = textureData[texIndex + 1]
+
+            val normIndex = (indices[i] / 6) * 3 // Each face has the same normal for all its vertices
+            finalNormalData[i * 3] = normalData[normIndex]
+            finalNormalData[i * 3 + 1] = normalData[normIndex + 1]
+            finalNormalData[i * 3 + 2] = normalData[normIndex + 2]
         }
 
-        // Convert arrays into buffers
         vertices = ByteBuffer.allocateDirect(finalVertexData.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
@@ -350,11 +394,18 @@ class OBJLoader(private val context: Context) {
             .asFloatBuffer()
         textureCoords.put(finalTextureData).position(0)
 
+        normals = ByteBuffer.allocateDirect(finalNormalData.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        normals.put(finalNormalData).position(0)
+
         modelVertices["cube"] = vertices
         modelTextureCoords["cube"] = textureCoords
+        modelNormals["cube"] = normals
 
         Log.d("OBJLoader", "Cube primitive generated and cached: cube")
     }
+
     // Function to generate a plain color texture and cache it
     fun generatePlainTexture(): Int {
         if (loadedTextures.containsKey("plain")) {

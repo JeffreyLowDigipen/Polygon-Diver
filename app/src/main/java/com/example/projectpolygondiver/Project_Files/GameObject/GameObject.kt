@@ -3,6 +3,9 @@ package com.example.projectpolygondiver.GameObjects
 import org.joml.Matrix4f
 import org.joml.Vector2f
 import org.joml.Vector3f
+import java.lang.Math.toDegrees
+import kotlin.math.asin
+import kotlin.math.atan2
 
 open class GameObject {
 
@@ -36,6 +39,7 @@ open class GameObject {
     // Update called every frame
     open fun update(deltaTime: Float) {
         // Perform object-specific updates here (animations, AI, etc.)
+       // rotation.x +=1;
         computeTransformationMatrix()
     }
     // Axis-Aligned Bounding Box (AABB) collision check
@@ -53,6 +57,8 @@ open class GameObject {
     private fun computeTransformationMatrix() {
         modelMatrix.identity() // Reset the matrix
 
+
+
         // Apply transformations in order: Scale → Rotate → Translate
         modelMatrix.translate(position)
             .rotateX(Math.toRadians(rotation.x.toDouble()).toFloat())
@@ -60,6 +66,40 @@ open class GameObject {
             .rotateZ(Math.toRadians(rotation.z.toDouble()).toFloat())
             .scale(scale)
     }
+
+
+
+    fun computeTopDownYaw(direction: Vector3f): Float {
+        if (direction.length() == 0f) return 0f // Avoid zero-length vector
+
+        val normalizedDirection = direction.normalize()
+
+        // Use X and Z for proper top-down rotation (Y-axis is the vertical axis)
+        val yaw = toDegrees(atan2(-normalizedDirection.z.toDouble(), normalizedDirection.x.toDouble())).toFloat()
+
+        // Ensure yaw stays within 0-360 degrees
+        return if (yaw < 0) yaw + 360f else yaw
+    }
+    fun rotateModel(deltaRotation: Float, deltaTime: Float) {
+        // Smooth continuous rotation around the Y-axis
+        rotation.y += deltaRotation * deltaTime
+
+        // Ensure rotation stays within 0-360 degrees
+        if (rotation.y >= 360f) rotation.y -= 360f
+        if (rotation.y < 0f) rotation.y += 360f
+    }
+
+    fun computeYawFromDirection(direction: Vector3f): Float {
+        if (direction.length() == 0f) return rotation.y // Keep current rotation if there's no movement
+
+        val normalizedDirection = direction.normalize()
+
+        // atan2 returns a value between -PI and PI, allowing for smooth 360° rotation
+        val yaw = toDegrees(atan2(normalizedDirection.x.toDouble(), normalizedDirection.z.toDouble())).toFloat()
+
+        return if (yaw < 0) yaw + 360f else yaw // Convert negative angles to positive for full rotation
+    }
+
 
 
     open fun render()

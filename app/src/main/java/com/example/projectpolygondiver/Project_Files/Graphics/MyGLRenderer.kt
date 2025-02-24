@@ -29,7 +29,10 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES30.glClearColor(0f, 0f, 0f, 1f)
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
-        GLES30.glDisable(GLES30.GL_CULL_FACE)
+       // GLES30.glEnable(GLES30.GL_CULL_FACE)
+        GLES30.glDisable(GLES30.GL_CULL_FACE) // Disable backface culling
+        GLES30.glFrontFace(GLES30.GL_CCW) // Counter-clockwise winding order
+
 
         // Initialize shaders and program
         val vertexShaderCode = loadShaderFromAssets("Shaders/default_vertex_shader.glsl")
@@ -51,19 +54,24 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         val currentTime = System.currentTimeMillis()
 
-        val deltaTime = (currentTime - lastFrameTime) / 1000f // Convert nanoseconds to seconds
+        var deltaTime = (currentTime - lastFrameTime) / 1000f
+        if(deltaTime<0)
+            deltaTime=0f// Convert nanoseconds to seconds
         lastFrameTime = currentTime
 
         GameObjectManager.deltaTime=deltaTime;
+
         GameObjectManager.PreUpdateAddGO()
   //      Log.d("MainActivity","Test")
         InputManager.update(deltaTime);
+
 
         //Log.d ("Player" , "Player Pos: ${GameObjectManager.Player?.position?.x},${GameObjectManager.Player?.position?.y},${GameObjectManager.Player?.position?.z}")
        // Log.d("CameraDebug", "background Position -> x: ${backgroundGO?.position?.x}, y: ${backgroundGO?.position?.y}, z: ${backgroundGO?.position?.z}")
        // Log.d("CameraDebug", "Camera Position -> x: ${CameraManager.cameraPosition?.x}, y: ${CameraManager.cameraPosition?.y}, z: ${CameraManager.cameraPosition?.z}")
         //Log.d("CameraDebug", "scale  -> x: ${backgroundGO?.scale?.x}, y: ${backgroundGO?.scale?.y}, z: ${backgroundGO?.scale?.z}")
         // Loop through all game objects and render them
+        GameObjectManager.update(deltaTime);
         CameraManager.updateViewMatrix()
         for (gameObject in GameObjectManager.getAllGameObjects()) {
 
@@ -131,6 +139,49 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         } else {
             Log.e("OpenGL", "Texture coordinate attribute not found in shader.")
         }
+
+
+        // Pass light properties
+        val lightPosHandle = GLES30.glGetUniformLocation(program, "u_LightPos")
+        val lightColorHandle = GLES30.glGetUniformLocation(program, "u_LightColor")
+        val viewPosHandle = GLES30.glGetUniformLocation(program, "u_ViewPos")
+
+        GLES30.glUniform3f(lightPosHandle, 0f, 10f, -10f) // Light coming from above and front
+        GLES30.glUniform3f(lightColorHandle, 1f, 1f, 1f) // White light
+        GLES30.glUniform3f(viewPosHandle, cameraPosition.x, cameraPosition.y, cameraPosition.z) // Camera position
+
+        // Use the GameObject's already updated modelMatrix
+        val modelMatrix = gameObject.modelMatrix.get(FloatArray(16))
+
+        // Calculate the normal matrix (inverse transpose of the model matrix)
+        val invertedModelMatrix = FloatArray(16)
+        Matrix.invertM(invertedModelMatrix, 0, modelMatrix, 0)
+        Matrix.transposeM(invertedModelMatrix, 0, invertedModelMatrix, 0)
+
+        // Convert 4x4 matrix to 3x3 for normals
+        val normalMatrix = FloatArray(9)
+        for (i in 0..2) {
+            for (j in 0..2) {
+                normalMatrix[i * 3 + j] = invertedModelMatrix[i * 4 + j]
+            }
+        }
+
+
+        // Upload the matrices to the shader
+        val modelMatrixHandle = GLES30.glGetUniformLocation(program, "u_ModelMatrix")
+        GLES30.glUniformMatrix4fv(modelMatrixHandle, 1, false, gameObject.modelMatrix.get(FloatArray(16)), 0)
+
+        val normalMatrixHandle = GLES30.glGetUniformLocation(program, "u_NormalMatrix")
+        GLES30.glUniformMatrix3fv(normalMatrixHandle, 1, false, normalMatrix, 0)
+
+        // Pass normal attribute from OBJLoader
+        val normalHandle = 2 // Assuming location 2 for normals
+        val normals = OBJLoader.modelNormals[gameObject.modelName]
+        if (normals != null) {
+            GLES30.glEnableVertexAttribArray(normalHandle)
+            GLES30.glVertexAttribPointer(normalHandle, 3, GLES30.GL_FLOAT, false, 0, normals)
+        }
+
 
         // Set tint color (e.g., light red tint)
         val tintColorHandle = GLES30.glGetUniformLocation(program, "u_Color")
