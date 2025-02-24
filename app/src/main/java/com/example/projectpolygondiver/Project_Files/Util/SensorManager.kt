@@ -34,7 +34,7 @@ class TiltSensorManager(context: Context) : SensorEventListener {
 
     private var initialOrientationSet = false
     private var lastTiltTime = 0L
-    private val tiltCooldown = 1f // 1-second cooldown
+    private val tiltCooldown = 300f // 1-second cooldown
 
     private var tiltDetected = false // Flag to check if a tilt has already been detected
     private val recenterThreshold = 15f // Threshold for re-centering the phone
@@ -117,7 +117,7 @@ class TiltSensorManager(context: Context) : SensorEventListener {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastTiltTime < tiltCooldown) return
 
-        val aggressiveTiltThreshold = 20f // Require larger tilts for detection
+        val aggressiveTiltThreshold = 30f // Require larger tilts for detection
 
         // 🔄 Re-centering check for Roll (Left / Right)
         if (tiltDetectedRoll) {
