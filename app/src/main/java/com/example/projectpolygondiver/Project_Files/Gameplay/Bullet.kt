@@ -7,7 +7,8 @@ import com.example.projectpolygondiver.Managers.GameObjectManager
 class Bullet(
     startPosition: Vector3f,
     private val direction: Vector3f,
-    private val speed: Float =10f
+    private val speed: Float =10f,
+    changeTo3D : Boolean =false
 ) : GameObject() {
 
     private val lifespan = 5f // Bullet lasts for 5 seconds
@@ -16,9 +17,17 @@ class Bullet(
     init {
         modelName = "plane"
         position = Vector3f(startPosition)
-        scale = Vector3f(0.3f, 0.3f, 0.3f) // Small bullet
-        color = Vector3f(1f, 0f, 0f) // Red bullet
-        textureName = "Chicken_Tx"
+
+        if(changeTo3D) {
+            scale = Vector3f(0.4f, 0.4f, 0.4f) // Small bullet
+            color = Vector3f(1f, 0f, 0f) // Red bullet
+        }
+        else
+        {
+            scale = Vector3f(0.3f, 0.3f, 0.3f) // Small bullet
+            color = Vector3f(1f, 0f, 0f) // Red bullet
+        }
+        //textureName = "Chicken_Tx"
         direction.normalize()
 
     }
@@ -44,6 +53,15 @@ class Bullet(
             if(other.type==GOType.ENEMY)
             {
                 GameObjectManager.removeGameObject(this)
+                val player = GameObjectManager.Player as? Player
+                if(player !=null)
+                {
+                    player.score++;
+                    if(player.score>= player.targetScoreTo3D)
+                    {
+                        player.ChangePlayerTo3D()
+                    }
+                }
             }
 
         }

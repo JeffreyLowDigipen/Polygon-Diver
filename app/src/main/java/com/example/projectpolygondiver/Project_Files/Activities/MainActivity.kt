@@ -105,14 +105,14 @@ class MainActivity : AppCompatActivity() {
         )
 
         val player = Player().apply {
-            modelName = "Chicken_Obj"
+            modelName = "plane"
             position = Vector3f(0f, 0f, 0f)
-            rotation = Vector3f(90f, 0f, 0f)
-            scale = Vector3f(0.1f, 0.1f, 0.1f)
+            rotation = Vector3f(0f, 0f, 0f)
+            scale = Vector3f(1f, 1f, 1f)
             color = Vector3f(1f, 1f, 1f)
-            textureName = "Chicken_Tx"
+            textureName = "microwave"
             type = GameObject.GOType.PLAYER
-            movementSpeed = 2f
+            movementSpeed = 3f
         }
 
 

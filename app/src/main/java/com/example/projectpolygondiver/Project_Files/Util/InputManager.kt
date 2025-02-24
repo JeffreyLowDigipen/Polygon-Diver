@@ -92,6 +92,8 @@ object InputManager : View.OnTouchListener {
            if(!TriggerTiltReset)
            {
                TriggerTiltReset=true;
+              var player= GameObjectManager.Player as Player
+               player.skill.directionCheckTimer=0f;
                tiltSensorManager.ResetOrientation()
            }
 

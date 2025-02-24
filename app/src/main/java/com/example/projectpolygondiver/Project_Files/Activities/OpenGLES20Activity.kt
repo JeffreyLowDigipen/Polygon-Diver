@@ -2,20 +2,16 @@ package com.example.projectpolygondiver.OpenGLActivity
 
 import com.example.projectpolygondiver.Sensors.TiltSensorManager
 import android.content.Context
-import android.graphics.Color
 import android.opengl.GLSurfaceView
 import android.os.Bundle
 import android.widget.TextView
-import android.widget.FrameLayout
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.view.KeyEvent
 import androidx.appcompat.app.AppCompatActivity
-import com.example.projectpolygondiver.GameObjects.GameObject
 import com.example.projectpolygondiver.GameObjects.Player
-import com.example.projectpolygondiver.GameObjects.Skills
 import com.example.projectpolygondiver.Graphics.MyGLRenderer
 import com.example.projectpolygondiver.Managers.GameObjectManager
 import com.example.projectpolygondiver.Managers.InputManager
@@ -74,7 +70,7 @@ class OpenGLES20Activity : AppCompatActivity() {
         if (keyCode == KeyEvent.KEYCODE_SPACE) {
             Log.d("Input" ,"Space is pressed")
             val playerObject = GameObjectManager.Player as? Player
-            playerObject?.skill?.activateShrink(5f, Vector3f(0.1f,0.1f,0.1f),1f)
+            playerObject?.skill?.activateShrink(5f, 0.4f,1f)
 
             return true // Consume the event
         }

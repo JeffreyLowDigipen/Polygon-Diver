@@ -13,6 +13,10 @@ class Player : GameObject() {
     private var timeSinceLastShot = 0f
     private var lastMoveDirection = Vector3f(0f, -1f, 0f) // Default shooting upwards
     private var targetYaw: Float = 0f
+
+    public var score : Int = 0;
+    public var targetScoreTo3D = 5;
+    public var changeTo3D=false;
     public val skill:Skills =Skills()
 //    init {
 //        //modelName = "plane"
@@ -35,8 +39,10 @@ class Player : GameObject() {
 //            }
 //        }
 
+
         super.update(deltaTime)
-        rotateTowardsTarget(deltaTime)
+        if(changeTo3D)
+            rotateTowardsTarget(deltaTime)
 
 
         timeSinceLastShot += deltaTime
@@ -48,6 +54,10 @@ class Player : GameObject() {
             timeSinceLastShot = 0f // Reset cooldown
         }
         skill.update(deltaTime)
+
+      //  rotation.x+=1;
+       // rotation.y +=1;
+        //rotation.z +=1;
     }
     // Function to set the target rotation based on touch input
     fun setTargetRotation(yaw: Float) {
@@ -81,7 +91,7 @@ class Player : GameObject() {
     }
 
     private fun shoot() {
-        val bullet = Bullet(Vector3f(position), Vector3f(lastMoveDirection)) // Shoot in the last movement direction
+        val bullet = Bullet(Vector3f(position), Vector3f(lastMoveDirection),10f,changeTo3D) // Shoot in the last movement direction
         GameObjectManager.addGameObject(bullet)
        // Log.d("Player", "Shot fired from position: ${position.x}, ${position.y}, ${position.z} towards direction: $lastMoveDirection")
     }
@@ -100,5 +110,14 @@ class Player : GameObject() {
 
         // Calculate pitch (rotation around X-axis)
         val pitch = Math.toDegrees(asin(-normalizedDirection.y.toDouble())).toFloat()
+    }
+    fun ChangePlayerTo3D()
+    {
+        textureName="robot2"
+        modelName="robot2"
+        scale = Vector3f(0.07f, 0.07f, 0.07f)
+        GameObjectManager.enemySpawner.changeTo3D=true;
+        changeTo3D=true;
+        rotation = Vector3f(90f, 0f, 0f)
     }
 }

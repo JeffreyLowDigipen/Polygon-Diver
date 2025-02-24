@@ -9,7 +9,7 @@ object GameObjectManager {
     private val deleteObjects: MutableList<GameObject> = mutableListOf()
     private val addObjects: MutableList<GameObject> = mutableListOf()
 
-    private var enemySpawner : EnemySpawner = EnemySpawner;
+    public var enemySpawner : EnemySpawner = EnemySpawner;
 
     public var frameCount = 0
     public var fps = 0

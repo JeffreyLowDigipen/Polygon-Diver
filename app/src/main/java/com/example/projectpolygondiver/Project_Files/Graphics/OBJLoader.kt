@@ -37,7 +37,13 @@ class OBJLoader(private val context: Context) {
         listAssetFiles(context, "Textures")  // Lists files inside the Textures folder
         loadTexture("Textures/background.jpg")
         loadTexture("Textures/Chicken_Tx.jpg")
+        loadTexture("Textures/virus.png")
+        loadModel("Models/robot2.obj")
         loadModel("Models/Chicken_Obj.obj")
+        loadTexture("Textures/robot2.jpg")
+        loadModel("Models/robot.obj")
+        loadTexture("Textures/robot.jpg")
+        loadTexture("Textures/microwave.png")
 
     }
     fun loadModel(modelName: String) {
