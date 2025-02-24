@@ -1,7 +1,10 @@
-package com.example.projectpolygondiver.Project_Files.Graphics
+package com.example.projectpolygondiver.Graphics
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.Matrix
 import android.opengl.GLES30
 import android.opengl.GLUtils
 import android.util.Log
@@ -11,32 +14,48 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class OBJLoader(private val context: Context, private val objFileName: String) {
+class OBJLoader(private val context: Context) {
 
     lateinit var vertices: FloatBuffer
     lateinit var textureCoords: FloatBuffer
 
-    private val vertexList = mutableListOf<Float>()
-    private val textureList = mutableListOf<Float>()
-    private val faceList = mutableListOf<Int>()
-    private val texCoordList = mutableListOf<Int>()
+    // Global caches for model data and textures
+    companion object {
+        val modelVertices = mutableMapOf<String, FloatBuffer>()
+        val modelTextureCoords = mutableMapOf<String, FloatBuffer>()
+        val loadedTextures = mutableMapOf<String, Int>() // Cache textures using their file path as keys
+    }
 
-    // Bounds for centering and scaling
-    var minX = Float.MAX_VALUE
-    var minY = Float.MAX_VALUE
-    var minZ = Float.MAX_VALUE
-    var maxX = Float.MIN_VALUE
-    var maxY = Float.MIN_VALUE
-    var maxZ = Float.MIN_VALUE
 
-    var textureId: Int = 0
-    private var texturePath: String = ""
+    fun Init()
+    {
+        generatePrimitiveCube()
+        generatePrimitivePlane()
+       // generatePlainTexture()
+       // loadTexture("Textures/Chicken_Tx.jpg")
+        listAssetFiles(context, "Textures")  // Lists files inside the Textures folder
+        loadTexture("Textures/background.jpg")
+        loadTexture("Textures/Chicken_Tx.jpg")
 
-    var bumpTextureId: Int = -1
-    private var bumpTexturePath: String = ""
-    var hasBumpMap: Boolean =false
-    fun load() {
-        val inputStream = context.assets.open(objFileName)
+    }
+    // Load a model and cache data
+    fun loadModel(modelName: String) {
+        // Check if model data is already cached
+        if (modelVertices.containsKey(modelName.trim())) {
+            Log.d("OBJLoader", "Model data loaded from cache: $modelName")
+            vertices = modelVertices[modelName]!!
+            textureCoords = modelTextureCoords[modelName]!!
+            return
+        }
+
+        // Initialize local lists
+        val vertexList = mutableListOf<Float>()
+        val textureList = mutableListOf<Float>()
+        val faceList = mutableListOf<Int>()
+        val texCoordList = mutableListOf<Int>()
+
+        // Load model from assets
+        val inputStream = context.assets.open(modelName)
         val reader = BufferedReader(InputStreamReader(inputStream))
 
         reader.forEachLine { line ->
@@ -46,59 +65,27 @@ class OBJLoader(private val context: Context, private val objFileName: String) {
                     val x = parts[1].toFloat()
                     val y = parts[2].toFloat()
                     val z = parts[3].toFloat()
-
-                    vertexList.add(x)
-                    vertexList.add(y)
-                    vertexList.add(z)
-
-                    // Update bounds
-                    minX = minOf(minX, x)
-                    minY = minOf(minY, y)
-                    minZ = minOf(minZ, z)
-                    maxX = maxOf(maxX, x)
-                    maxY = maxOf(maxY, y)
-                    maxZ = maxOf(maxZ, z)
+                    vertexList.addAll(listOf(x, y, z))
                 }
-                "vt" -> {
+
+                "vt" -> { // Texture coordinates
                     if (parts.size >= 3) {
-                        textureList.add(parts[1].toFloat()) // U-coordinate
-                        textureList.add(1.0f - parts[2].toFloat()) // Flip V-coordinate
+                        textureList.add(parts[1].toFloat())
+                        textureList.add(1.0f - parts[2].toFloat())
                     } else {
-                        // Add a default texture coordinate if missing
                         textureList.add(0.0f)
                         textureList.add(0.0f)
                     }
                 }
 
-                "f" -> {
-                    if (parts.size == 5) { // Quad face (4 vertices)
-                        val indices = parts.subList(1, 5).map { it.split("/")[0].toInt() - 1 }
-
-                        // Convert quad into two triangles
-                        faceList.add(indices[0])
-                        faceList.add(indices[1])
-                        faceList.add(indices[2])
-
-                        faceList.add(indices[0])
-                        faceList.add(indices[2])
-                        faceList.add(indices[3])
-                    } else if (parts.size == 4) { // Triangle face (3 vertices)
-                        for (i in 1..3) { // Preserve CCW winding order
+                "f" -> { // Faces
+                    if (parts.size == 4) {
+                        for (i in 1..3) {
                             val indices = parts[i].split("/")
                             faceList.add(indices[0].toInt() - 1)
-                            if (indices.size > 1 && indices[1].isNotEmpty()) {
-                                texCoordList.add(indices[1].toInt() - 1)
-                            } else {
-                                texCoordList.add(0) // Default texture coordinate
-                            }
+                            texCoordList.add(if (indices.size > 1 && indices[1].isNotEmpty()) indices[1].toInt() - 1 else 0)
                         }
                     }
-                }
-
-
-
-                "mtllib" -> { // Load MTL file
-                    loadMTL(parts[1])
                 }
             }
         }
@@ -107,24 +94,18 @@ class OBJLoader(private val context: Context, private val objFileName: String) {
             Log.e("OBJLoader", "Model loading failed: Empty vertex or face list")
             return
         }
-        if (textureList.isEmpty() || texCoordList.isEmpty()) {
-            Log.e("OBJLoader", "Missing texture coordinates, initializing default UVs.")
-            for (i in 0 until vertexList.size / 3) {
-                textureList.add(0.0f) // Default U-coordinate
-                textureList.add(0.0f) // Default V-coordinate
-            }
 
-            for (i in 0 until faceList.size) {
-                texCoordList.add(0) // Default texture index
-            }
-        }
+        initializeBuffers(modelName, vertexList, textureList, faceList, texCoordList)
+    }
 
-
-
-        // Log bounds
-        Log.d("OBJLoader", "Model Bounds: Min($minX, $minY, $minZ) Max($maxX, $maxY, $maxZ)")
-
-        // Load vertex data into buffer
+    // Initialize vertex and texture buffers and cache them
+    private fun initializeBuffers(
+        modelName: String,
+        vertexList: List<Float>,
+        textureList: List<Float>,
+        faceList: List<Int>,
+        texCoordList: List<Int>
+    ) {
         val vertexData = FloatArray(faceList.size * 3)
         for (i in faceList.indices) {
             val vertexIndex = faceList[i] * 3
@@ -138,10 +119,6 @@ class OBJLoader(private val context: Context, private val objFileName: String) {
             .asFloatBuffer()
         vertices.put(vertexData).position(0)
 
-
-
-
-        // Load texture coordinates into buffer
         val textureData = FloatArray(texCoordList.size * 2)
         for (i in texCoordList.indices) {
             val texIndex = texCoordList[i] * 2
@@ -149,125 +126,287 @@ class OBJLoader(private val context: Context, private val objFileName: String) {
             textureData[i * 2 + 1] = textureList[texIndex + 1]
         }
 
-        if (textureList.size / 2 < vertexList.size / 3) {
-            val missingUVs = (vertexList.size / 3) - (textureList.size / 2)
-            for (i in 0 until missingUVs) {
-                textureList.add(0.0f) // Default U-coordinate
-                textureList.add(0.0f) // Default V-coordinate
-            }
-            Log.e("OBJLoader", "Added $missingUVs default texture coordinates for missing UVs.")
-        }
-
-
-
         textureCoords = ByteBuffer.allocateDirect(textureData.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
         textureCoords.put(textureData).position(0)
 
-        // Load texture from file
-        if (texturePath.isNotEmpty()) {
-            textureId = loadTexture(texturePath)
-        }
-        if (bumpTexturePath.isNotEmpty()) {
-            bumpTextureId = loadTexture(bumpTexturePath)
-            hasBumpMap=true
-        }
-        Log.d("OBJLoader", "Vertex Buffer Capacity: ${vertices.capacity() / 3}")
-        Log.d("OBJLoader", "Texture Coord Buffer Capacity: ${textureCoords.capacity() / 2}")
+        // Remove directory path and file extension from model name
+        val trimmedModelName = modelName.substringAfterLast("/").substringBeforeLast(".")
+
+        modelVertices[trimmedModelName] = vertices
+        modelTextureCoords[trimmedModelName] = textureCoords
+
+        Log.d("OBJLoader", "Model loaded and cached: $trimmedModelName")
 
 
-        initializeTexture()
+
     }
 
-    // Load the texture from MTL file
-    private fun loadMTL(mtlFileName: String) {
-        try {
-            val inputStream = context.assets.open("Models/$mtlFileName")
-            val reader = BufferedReader(InputStreamReader(inputStream))
+    // Load texture and cache it globally
+    fun loadTexture(textureFile: String): Int {
 
-            reader.forEachLine { line ->
-                val parts = line.trim().split("\\s+".toRegex())
-                when (parts[0]) {
-                    "map_Kd" -> { // Diffuse texture
-                        texturePath = "Textures/${parts[1]}"
-                        Log.d("OBJLoader", "Adjusted Texture Path: $texturePath")
-                    }
-                    "map_bump", "bump" -> { // Bump map texture
-                        bumpTexturePath = "Textures/${parts[1]}"
-                        Log.d("OBJLoader", "Bump Texture Loaded: $bumpTexturePath")
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("OBJLoader", "Failed to load MTL file: $mtlFileName, Error: ${e.message}")
+        if (GLES30.glGetError() != GLES30.GL_NO_ERROR) {
+            Log.e("TextureLoader", "OpenGL error before generating texture")
         }
-    }
 
+        // Check if texture is already cached
+        if (loadedTextures.containsKey(textureFile)) {
+            Log.d("TextureLoader", "Texture loaded from cache: $textureFile at ${loadedTextures[textureFile]}")
+            return loadedTextures[textureFile]!!
+        }
 
-    // Load the texture into OpenGL
-    private fun loadTexture(textureFile: String): Int {
+        // Generate unique texture ID
         val textureIds = IntArray(1)
         GLES30.glGenTextures(1, textureIds, 0)
-       // if (textureIds[0] == 0) {
-            Log.d("TextureLoad", "Generate texture ID. ${textureIds[0]}")
-          //  return -1
-        //}
-        val bitmap = BitmapFactory.decodeStream(context.assets.open(textureFile))
 
+        // Check if texture generation failed
+        if (textureIds[0] == 0) {
+            Log.e("TextureLoader", "Failed to generate texture ID for $textureFile")
+            return 0
+        }
+
+        // Decode the bitmap from the asset folder
+        val bitmap = BitmapFactory.decodeStream(context.assets.open(textureFile))
+        val flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, Matrix().apply {
+            preScale(1f, -1f) // Flip vertically for OpenGL
+        }, true)
+
+        // Bind the texture and set its parameters
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureIds[0])
+
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
 
-        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
-        bitmap.recycle()
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, flippedBitmap, 0)
+        flippedBitmap.recycle()
+
+        val trimmedTextureName = textureFile.substringAfterLast("/").substringBeforeLast(".")
+        // Store the texture in the cache with its ID
+        loadedTextures[trimmedTextureName] = textureIds[0]
+
+        // Log for debugging
+        Log.d("TextureLoader", "Texture loaded and cached: $trimmedTextureName at ${textureIds[0]}")
 
         return textureIds[0]
     }
 
-    // Calculate the center of the model for proper positioning
-    fun getCenter(): FloatArray {
-        return floatArrayOf(
-            (minX + maxX) / 2f,
-            (minY + maxY) / 2f,
-            (minZ + maxZ) / 2f
-        )
-    }
 
-    // Calculate scale factor based on the largest dimension
-    fun getScaleFactor(): Float {
-        val sizeX = maxX - minX
-        val sizeY = maxY - minY
-        val sizeZ = maxZ - minZ
-        return 2f / maxOf(sizeX, sizeY, sizeZ) // Normalize to fit within [-1, 1]
-    }
+    // Load sprite texture for 2D rendering
+    fun loadSpriteTexture(textureFile: String): Int {
+        if (loadedTextures.containsKey(textureFile)) {
+            Log.d("OBJLoader", "Sprite texture loaded from cache: $textureFile")
+            return loadedTextures[textureFile]!!
+        }
 
-    fun initializeTexture(): Int {
         val textureIds = IntArray(1)
         GLES30.glGenTextures(1, textureIds, 0)
 
-        Log.d("TextureLoad", "Generate texture ID. ${textureIds[0]}")
-
+        val bitmap = BitmapFactory.decodeStream(context.assets.open(textureFile))
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureIds[0])
 
-        // Set texture parameters
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        // Texture parameters optimized for sprites
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
 
-        // Create a 1x1 pixel dummy texture
-        val pixel = intArrayOf(0xFFFFFFFF.toInt()) // White color
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+        bitmap.recycle()
+
+        loadedTextures[textureFile] = textureIds[0]
+        Log.d("OBJLoader", "Sprite texture loaded and cached: $textureFile")
+
+        return textureIds[0]
+    }
+
+    fun generatePrimitivePlane() {
+        if (modelVertices.containsKey("plane")) {
+            Log.d("OBJLoader", "Primitive model already generated: plane")
+            return
+        }
+
+        // Define a square in 3D space for sprite rendering
+        val halfSize = 1f / 2f
+        val vertexData = floatArrayOf(
+            -halfSize, halfSize, 0f,  // Top-left
+            halfSize, halfSize, 0f,   // Top-right
+            -halfSize, -halfSize, 0f, // Bottom-left
+            halfSize, -halfSize, 0f   // Bottom-right
+        )
+
+        val textureData = floatArrayOf(
+            0f, 0f,  // Top-left
+            1f, 0f,  // Top-right
+            0f, 1f,  // Bottom-left
+            1f, 1f   // Bottom-right
+        )
+
+        // Define indices for two triangles
+        val indices = intArrayOf(
+            0, 1, 2,  // First triangle (Top-left, Top-right, Bottom-left)
+            1, 3, 2   // Second triangle (Top-right, Bottom-right, Bottom-left)
+        )
+
+        // Convert arrays into buffers
+        val finalVertexData = FloatArray(indices.size * 3)
+        val finalTextureData = FloatArray(indices.size * 2)
+
+        for (i in indices.indices) {
+            val vertexIndex = indices[i] * 3
+            finalVertexData[i * 3] = vertexData[vertexIndex]
+            finalVertexData[i * 3 + 1] = vertexData[vertexIndex + 1]
+            finalVertexData[i * 3 + 2] = vertexData[vertexIndex + 2]
+
+            val texIndex = indices[i] * 2
+            finalTextureData[i * 2] = textureData[texIndex]
+            finalTextureData[i * 2 + 1] = textureData[texIndex + 1]
+        }
+
+        vertices = ByteBuffer.allocateDirect(finalVertexData.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        vertices.put(finalVertexData).position(0)
+
+        textureCoords = ByteBuffer.allocateDirect(finalTextureData.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        textureCoords.put(finalTextureData).position(0)
+
+        // Cache the primitive model
+        modelVertices["plane"] = vertices
+        modelTextureCoords["plane"] = textureCoords
+
+        Log.d("OBJLoader", "Primitive model generated and cached: plane")
+    }
+
+    fun generatePrimitiveCube() {
+        if (modelVertices.containsKey("cube")) {
+            Log.d("OBJLoader", "Primitive cube already generated: cube")
+            return
+        }
+
+        val halfSize = 1f / 2f
+        val vertexData = floatArrayOf(
+            // Front face
+            -halfSize, -halfSize,  halfSize, // Bottom-left
+            halfSize, -halfSize,  halfSize, // Bottom-right
+            halfSize,  halfSize,  halfSize, // Top-right
+            -halfSize,  halfSize,  halfSize, // Top-left
+
+            // Back face
+            -halfSize, -halfSize, -halfSize,
+            halfSize, -halfSize, -halfSize,
+            halfSize,  halfSize, -halfSize,
+            -halfSize,  halfSize, -halfSize
+        )
+
+        val textureData = floatArrayOf(
+            // Front face
+            0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f,
+            // Back face
+            0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f
+        )
+
+        // Define the indices for drawing triangles (two per face)
+        val indices = intArrayOf(
+            // Front face
+            0, 1, 2, 0, 2, 3,
+            // Back face
+            4, 5, 6, 4, 6, 7,
+            // Left face
+            4, 0, 3, 4, 3, 7,
+            // Right face
+            1, 5, 6, 1, 6, 2,
+            // Top face
+            3, 2, 6, 3, 6, 7,
+            // Bottom face
+            4, 5, 1, 4, 1, 0
+        )
+
+        // Create buffers for vertices and texture coordinates
+        val finalVertexData = FloatArray(indices.size * 3)
+        val finalTextureData = FloatArray(indices.size * 2)
+
+        for (i in indices.indices) {
+            val vertexIndex = indices[i] * 3
+            finalVertexData[i * 3] = vertexData[vertexIndex]
+            finalVertexData[i * 3 + 1] = vertexData[vertexIndex + 1]
+            finalVertexData[i * 3 + 2] = vertexData[vertexIndex + 2]
+
+            val texIndex = indices[i] * 2
+            finalTextureData[i * 2] = textureData[texIndex]
+            finalTextureData[i * 2 + 1] = textureData[texIndex + 1]
+        }
+
+        // Convert arrays into buffers
+        vertices = ByteBuffer.allocateDirect(finalVertexData.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        vertices.put(finalVertexData).position(0)
+
+        textureCoords = ByteBuffer.allocateDirect(finalTextureData.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+        textureCoords.put(finalTextureData).position(0)
+
+        modelVertices["cube"] = vertices
+        modelTextureCoords["cube"] = textureCoords
+
+        Log.d("OBJLoader", "Cube primitive generated and cached: cube")
+    }
+    // Function to generate a plain color texture and cache it
+    fun generatePlainTexture(): Int {
+        if (loadedTextures.containsKey("plain")) {
+            Log.d("OBJLoader", "Plain color texture loaded from cache: plain")
+            return loadedTextures["plain"] !!
+        }
+
+        val textureIds = IntArray(1)
+        GLES30.glGenTextures(1, textureIds, 0)
+
+        // Convert color from Vector3f (values between 0 and 1) to ARGB format
+        val red = 0
+        val green = 0
+        val blue = 0
+        val alpha = 255
+
+        val pixelColor = Color.argb(alpha, red, green, blue)
         val buffer = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder()).asIntBuffer()
-        buffer.put(pixel).position(0)
+        buffer.put(pixelColor).position(0)
+
+        // Bind texture and set parameters
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureIds[0])
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
 
         GLES30.glTexImage2D(
             GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA, 1, 1, 0,
             GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buffer
         )
 
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+        loadedTextures["plain"] = textureIds[0]
+        Log.d("OBJLoader", "Plain color texture generated and cached: plain")
+
         return textureIds[0]
+    }
+    fun listAssetFiles(context: Context, path: String) {
+        try {
+            val assetManager = context.assets
+            val files = assetManager.list(path) // List files in the given folder
+
+            if (files != null && files.isNotEmpty()) {
+                Log.d("AssetChecker", "Files in $path:")
+                for (file in files) {
+                    Log.d("AssetChecker", file)
+                }
+            } else {
+                Log.d("AssetChecker", "No files found in $path.")
+            }
+        } catch (e: Exception) {
+            Log.e("AssetChecker", "Error accessing assets in $path: ${e.message}")
+        }
     }
 
 }
+

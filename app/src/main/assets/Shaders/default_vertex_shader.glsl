@@ -1,17 +1,15 @@
-attribute vec4 a_Position;
-attribute vec2 a_TexCoord;
-attribute vec3 a_Normal;
+#version 300 es
+precision mediump float;
+
+layout (location = 0) in vec3 a_Position;
+layout (location = 1) in vec2 a_TexCoord;
 
 uniform mat4 u_MVPMatrix;
-uniform mat4 u_ModelMatrix;
+uniform vec2 u_TextureOffset;
 
-varying vec2 v_TexCoord;
-varying vec3 v_Normal;
+out vec2 v_TexCoord;
 
 void main() {
-    gl_Position = u_MVPMatrix * a_Position;
-    v_TexCoord = a_TexCoord;
-
-    // Transform normal to world space
-    v_Normal = normalize((u_ModelMatrix * vec4(a_Normal, 0.0)).xyz);
+    gl_Position = u_MVPMatrix * vec4(a_Position, 1.0);
+    v_TexCoord = a_TexCoord + u_TextureOffset;
 }

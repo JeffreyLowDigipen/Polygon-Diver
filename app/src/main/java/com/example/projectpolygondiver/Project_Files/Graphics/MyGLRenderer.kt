@@ -1,13 +1,18 @@
-package com.example.projectpolygondiver.Project_Files.Graphics
+package com.example.projectpolygondiver.Graphics
 
 import android.content.Context
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
+import com.example.projectpolygondiver.Managers.*
+import com.example.projectpolygondiver.GameObjects.GameObject
+import com.example.projectpolygondiver.Managers.CameraManager.backgroundGO
+import com.example.projectpolygondiver.Managers.CameraManager.cameraPosition
 import java.io.BufferedReader
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+
 
 class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
@@ -17,161 +22,169 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
     // MVP Matrices
     private val projectionMatrix = FloatArray(16)
     private val viewMatrix = FloatArray(16)
-    private val modelMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
 
-    private var rotationAngle = 0f
-    var useTexture = false  // Toggle texture usage
+    private var lastFrameTime: Long = System.nanoTime()
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES30.glClearColor(0f, 0f, 0f, 1f)
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
         GLES30.glDisable(GLES30.GL_CULL_FACE)
 
-        // Load shaders from assets
+        // Initialize shaders and program
         val vertexShaderCode = loadShaderFromAssets("Shaders/default_vertex_shader.glsl")
         val fragmentShaderCode = loadShaderFromAssets("Shaders/default_fragment_shader.glsl")
-
-        // Compile and link shaders
         program = loadShaderProgram(vertexShaderCode, fragmentShaderCode)
 
-        // Initialize and load OBJ model
-        objLoader = OBJLoader(context, "Models/Chicken_Obj.obj")
-        objLoader.load()
+        // Load textures AFTER OpenGL context is ready
+        objLoader = OBJLoader(context)
+        objLoader.Init()
 
-        Log.d("MyGLRenderer", "Cat model loaded successfully.")
-
-        // Set up camera view matrix
-        Matrix.setLookAtM(
-            viewMatrix, 0,
-            0f, 0f, 4f,  // Camera position
-            0f, 0f, 0f,  // Look at center
-            0f, 1f, 0f   // Up vector
-        )
-
-        val defaultTextureId = IntArray(1)
-        GLES30.glGenTextures(1, defaultTextureId, 0)
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, defaultTextureId[0])
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR)
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
-
+        CameraManager.updateViewMatrix()
+        Log.d("MyGLRenderer", "OpenGL context initialized and textures loaded.")
     }
+
 
     override fun onDrawFrame(gl: GL10?) {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
         GLES30.glUseProgram(program)
-        //Log.d("Test","Draw Start")
-        if (!::objLoader.isInitialized || objLoader.vertices.capacity() == 0 || objLoader.textureCoords.capacity() == 0) {
-            Log.e("MyGLRenderer", "OBJLoader not initialized or buffer is empty")
+
+        val currentTime = System.currentTimeMillis()
+
+        val deltaTime = (currentTime - lastFrameTime) / 1000f // Convert nanoseconds to seconds
+        lastFrameTime = currentTime
+
+        GameObjectManager.deltaTime=deltaTime;
+        GameObjectManager.PreUpdateAddGO()
+  //      Log.d("MainActivity","Test")
+        InputManager.update(deltaTime);
+
+        //Log.d ("Player" , "Player Pos: ${GameObjectManager.Player?.position?.x},${GameObjectManager.Player?.position?.y},${GameObjectManager.Player?.position?.z}")
+       // Log.d("CameraDebug", "background Position -> x: ${backgroundGO?.position?.x}, y: ${backgroundGO?.position?.y}, z: ${backgroundGO?.position?.z}")
+       // Log.d("CameraDebug", "Camera Position -> x: ${CameraManager.cameraPosition?.x}, y: ${CameraManager.cameraPosition?.y}, z: ${CameraManager.cameraPosition?.z}")
+        //Log.d("CameraDebug", "scale  -> x: ${backgroundGO?.scale?.x}, y: ${backgroundGO?.scale?.y}, z: ${backgroundGO?.scale?.z}")
+        // Loop through all game objects and render them
+        CameraManager.updateViewMatrix()
+        for (gameObject in GameObjectManager.getAllGameObjects()) {
+
+            gameObject.update(deltaTime)
+        }
+
+         GameObjectManager.checkCollisions()
+
+        for (gameObject in GameObjectManager.getAllGameObjects()) {
+            renderGameObject(gameObject)
+        }
+        GameObjectManager.removeGameObjectOnPostUpdate();
+
+        // Update FPS counter
+        GameObjectManager.frameCount++
+        if (currentTime - GameObjectManager.lastTime >= 1000) {
+            GameObjectManager.fps = GameObjectManager.frameCount
+            GameObjectManager.frameCount = 0
+            GameObjectManager.lastTime = currentTime
+        }
+
+    }
+
+    // Function to render a game object using its model and texture or color
+    private fun renderGameObject(gameObject: GameObject) {
+
+        if (!gameObject.active) return
+
+        // Retrieve model and texture from OBJLoader cache
+        val vertices = OBJLoader.modelVertices[gameObject.modelName]
+        val textureCoords = OBJLoader.modelTextureCoords[gameObject.modelName]
+        val textureId = if (gameObject.textureName.isNotEmpty()) {
+            OBJLoader.loadedTextures[gameObject.textureName]  // Fallback to 1 if not found
+        } else {
+            1 // Default texture ID if no texture name is provided
+        }
+
+
+        if (vertices == null || textureCoords == null) {
+            Log.e("Renderer", "Missing model or texture data for ${gameObject.modelName}")
             return
         }
 
 
-        // Auto-center and scale the model based on its bounds
-        val center = objLoader.getCenter()
-        val scaleFactor = 2f / maxOf(
-            objLoader.maxX - objLoader.minX,
-            objLoader.maxY - objLoader.minY,
-            objLoader.maxZ - objLoader.minZ
-        )
 
-        Matrix.setIdentityM(modelMatrix, 0)
-        Matrix.translateM(modelMatrix, 0, 0f, 0f, 0f) // Center the model
-        Matrix.scaleM(modelMatrix, 0, scaleFactor, scaleFactor, scaleFactor)
-        Matrix.rotateM(modelMatrix, 0, rotationAngle, 0f, 1f, 0f)
-
-        // Compute the MVP matrix
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+        val floatArray = FloatArray(16)
+        // Apply camera view and projection matrix
+        Matrix.multiplyMM(mvpMatrix, 0, CameraManager.viewMatrix, 0, gameObject.modelMatrix.get(floatArray), 0)
+        Matrix.multiplyMM(mvpMatrix, 0, CameraManager.projectionMatrix, 0, mvpMatrix, 0)
 
         // Pass MVP matrix to shader
         val mvpMatrixHandle = GLES30.glGetUniformLocation(program, "u_MVPMatrix")
         GLES30.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
-        val positionHandle = GLES30.glGetAttribLocation(program, "a_Position")
-        if (positionHandle != -1) {
-            GLES30.glEnableVertexAttribArray(positionHandle)
-            GLES30.glVertexAttribPointer(positionHandle, 3, GLES30.GL_FLOAT, false, 0, objLoader.vertices)
-        } else {
-            Log.e("OpenGL_Error", "Position attribute not found in shader.")
-        }
+        // Pass vertex data
+        val positionHandle =0
+        GLES30.glEnableVertexAttribArray(positionHandle)
+        GLES30.glVertexAttribPointer(positionHandle, 3, GLES30.GL_FLOAT, false, 0, vertices)
 
-        val texCoordHandle = GLES30.glGetAttribLocation(program, "a_TexCoord")
+        // Pass texture coordinates
+        val texCoordHandle = 1
         if (texCoordHandle != -1) {
             GLES30.glEnableVertexAttribArray(texCoordHandle)
-            GLES30.glVertexAttribPointer(texCoordHandle, 2, GLES30.GL_FLOAT, false, 0, objLoader.textureCoords)
+            GLES30.glVertexAttribPointer(texCoordHandle, 2, GLES30.GL_FLOAT, false, 0, textureCoords)
         } else {
-            Log.e("OpenGL_Error", "Texture coordinate attribute not found in shader.")
+            Log.e("OpenGL", "Texture coordinate attribute not found in shader.")
         }
 
+        // Set tint color (e.g., light red tint)
+        val tintColorHandle = GLES30.glGetUniformLocation(program, "u_Color")
+        GLES30.glUniform3f(tintColorHandle, gameObject.color.x,gameObject.color.y,gameObject.color.z) // Red tint
 
+        // Set tint strength (e.g., 0.3 for light tint)
+        val tintStrengthHandle = GLES30.glGetUniformLocation(program, "u_TintStrength")
+        GLES30.glUniform1f(tintStrengthHandle, 0.3f)
 
-        // Always pass texture coordinates
-        //val texCoordHandle = GLES30.glGetAttribLocation(program, "a_TexCoord")
-        GLES30.glEnableVertexAttribArray(texCoordHandle)
-        GLES30.glVertexAttribPointer(
-            texCoordHandle,
-            2,
-            GLES30.GL_FLOAT,
-            false,
-            0,
-            objLoader.textureCoords
-        )
-
-
-        // Handle texture binding
-        if (useTexture) {
+        // Pass texture offset for scrolling
+        val textureOffsetHandle = GLES30.glGetUniformLocation(program, "u_TextureOffset")
+        GLES30.glUniform2f(textureOffsetHandle, gameObject.textureOffset.x, gameObject.textureOffset.y)
+        //Log.d("OpenGL", "Texture offset: ${gameObject.textureOffset.x} , ${gameObject.textureOffset.y}")
+        // Pass color or bind texture
+        val useTextureHandle = GLES30.glGetUniformLocation(program, "u_UseTexture")
+        if (gameObject.textureName.isNotEmpty()) {
+            // Bind the texture
             val textureHandle = GLES30.glGetUniformLocation(program, "u_Texture")
             GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, objLoader.textureId)
-            GLES30.glUniform1i(textureHandle, 0)
-        }
-         else {
-            // Bind a default empty texture to avoid crashes
-            var textureHandle = GLES30.glGetUniformLocation(program, "u_Texture")
-           // Log.d ("OpenGL_Error" ,"Texture ID: $textureHandle")
-            GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
-            GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+            if (textureId != null) {
+                GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId)
+            }
             GLES30.glUniform1i(textureHandle, 0)
 
-            textureHandle = GLES30.glGetUniformLocation(program, "u_Texture")
-            Log.d ("OpenGL_Error" ,"Texture ID: $textureHandle")
+            // Inform shader to use texture
+            GLES30.glUniform1i(useTextureHandle, 1)
+
+          //  Log.d("TextureDebug", "${gameObject.textureName} Texture ID: $textureId")
+
+        } else {
+            // Pass color to the shader
+            val colorHandle = GLES30.glGetUniformLocation(program, "u_Color")
+            GLES30.glUniform3f(colorHandle, gameObject.color.x, gameObject.color.y, gameObject.color.z)
+
+            // Inform shader not to use texture
+            GLES30.glUniform1i(useTextureHandle, 0)
         }
-
-        val error = GLES30.glGetError()
-        if (error != GLES30.GL_NO_ERROR) {
-            Log.e("OpenGL_Error", "Error after binding texture: $error")
-        }
-
-
-        val vertexCount = objLoader.vertices.capacity() / 3
-        val textureCoordCount = objLoader.textureCoords.capacity() / 2
-
-       // if (vertexCount <= 0 || textureCoordCount <= 0) {
-        Log.d("GLDrawError", "Invalid vertex or texture coordinate count: Vertices = $vertexCount, Texture Coords = $textureCoordCount")
-            //return
-       // }
-
-
 
         // Draw the model
-        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, objLoader.vertices.capacity() / 3)
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, vertices.capacity() / 3)
 
-        if (positionHandle != -1) GLES30.glDisableVertexAttribArray(positionHandle)
-        if (texCoordHandle != -1) GLES30.glDisableVertexAttribArray(texCoordHandle)
-
-
-        // Increment rotation
-        rotationAngle += 0.5f
-
-       // Log.d("Test","Draw End")
+        // Disable vertex attributes
+        GLES30.glDisableVertexAttribArray(positionHandle)
+        GLES30.glDisableVertexAttribArray(texCoordHandle)
     }
+
+
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES30.glViewport(0, 0, width, height)
-        val aspectRatio = width.toFloat() / height.toFloat()
-        Matrix.perspectiveM(projectionMatrix, 0, 60f, aspectRatio, 1f, 20f)
+        CameraManager.updateProjectionMatrix(width, height)
+        Log.d("MyGLRenderer", "onSurfaceChanged called with width: $width, height: $height")
     }
+
 
     // Load shader from assets folder
     private fun loadShaderFromAssets(fileName: String): String {

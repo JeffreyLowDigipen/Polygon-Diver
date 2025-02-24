@@ -1,20 +1,21 @@
+#version 300 es
 precision mediump float;
+
+in vec2 v_TexCoord;
 
 uniform sampler2D u_Texture;
 uniform bool u_UseTexture;
+uniform vec3 u_Color;       // Base color or tint color
+uniform float u_TintStrength; // Tint strength from 0.0 (no tint) to 1.0 (full tint)
 
-varying vec2 v_TexCoord;
+out vec4 fragColor;
 
 void main() {
-    vec4 baseColor;
-
-    // Use texture if enabled, otherwise use solid color
-  // if (u_UseTexture) {
-    //    baseColor = texture2D(u_Texture, v_TexCoord);
-   // } else {
-        baseColor = vec4(1.0, 0.5, 0.3, 1.0); // Solid orange color
-   // }
-
-    // Direct color output
-    gl_FragColor = baseColor;
+    if (u_UseTexture) {
+        vec4 texColor = texture(u_Texture, v_TexCoord);
+        // Blend texture color with tint color
+        fragColor = mix(texColor, vec4(u_Color, 1.0), u_TintStrength);
+    } else {
+        fragColor = vec4(u_Color, 1.0); // Use the solid color if no texture
+    }
 }
