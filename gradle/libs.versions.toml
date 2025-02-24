@@ -1,17 +1,28 @@
 [versions]
+<<<<<<< Updated upstream
 agp = "8.8.0"
 jbullet = "20101010-1"
 jbulletVersion = "20101010"
 joml = "1.10.5"
 kotlin = "1.9.24"
 coreKtx = "1.10.1"
+=======
+agp = "8.8.1"
+appcompat = "1.7.0"
+compose = "1.7.8"
+coreKtx = "1.15.0"
+espressoCore = "3.6.1"
+>>>>>>> Stashed changes
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-appcompat = "1.6.1"
-material = "1.10.0"
+junitVersion = "1.2.1"
+kotlin = "1.9.24"
+material = "1.12.0"
+navigationRuntimeKtx = "2.8.7"
+navigationCompose = "2.8.7"
+roomCommon = "2.6.1"
 
 [libraries]
+<<<<<<< Updated upstream
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 github-jbullet = { module = "com.github.jbullet:jbullet", version.ref = "jbulletVersion" }
 jbullet = { module = "cz.advel.jbullet:jbullet", version.ref = "jbullet" }
@@ -19,7 +30,18 @@ joml = { module = "org.joml:joml", version.ref = "joml" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+=======
+>>>>>>> Stashed changes
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-compose-material = { module = "androidx.compose.material:material", version.ref = "compose" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-navigation-runtime-ktx = { group = "androidx.navigation", name = "navigation-runtime-ktx", version.ref = "navigationRuntimeKtx" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-room-common = { group = "androidx.room", name = "room-common", version.ref = "roomCommon" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 [plugins]
