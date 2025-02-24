@@ -39,7 +39,6 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
     implementation(libs.joml)
     implementation(libs.material)
     implementation(libs.androidx.navigation.runtime.ktx)
