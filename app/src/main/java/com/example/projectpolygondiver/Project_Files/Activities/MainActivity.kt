@@ -115,19 +115,12 @@ class MainActivity : AppCompatActivity() {
             movementSpeed = 2f
         }
 
-        val Enemy = GameObject().apply {
-            modelName = "plane"
-            position = Vector3f(0f, -5f, 0f)
-            scale = Vector3f(0.4f, 0.6f, 0.4f)
-            color = Vector3f(1f, 1f, 1f)
-            type = GameObject.GOType.ENEMY
-            movementSpeed = 2f
-        }
+
 
         val background = GameObject().apply {
             modelName = "plane"
             position = Vector3f(0f, 0f, -1f)
-            scale = backgroundScale.mul(1f);
+            scale = backgroundScale.mul(5f);
             color = Vector3f(0.01f, 0.01f, 0.01f)
             textureName = "background"
             type = GameObject.GOType.DEFAULT
@@ -137,7 +130,7 @@ class MainActivity : AppCompatActivity() {
 
 
         GameObjectManager.addGameObject(player)
-        GameObjectManager.addGameObject(Enemy)
+        //GameObjectManager.addGameObject(Enemy)
         GameObjectManager.Player = player
         GameObjectManager.addGameObject(background)
 

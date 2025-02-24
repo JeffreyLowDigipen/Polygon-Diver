@@ -21,12 +21,12 @@ object EnemySpawner {
     }
 
     private fun spawnEnemies(count: Int) {
-        Log.d("Enemy","Enemy Spawned")
+       // Log.d("Enemy","Enemy Spawned")
         for (i in 1..count) {
             val spawnPosition = generateSpawnPositionOutsideCamera()
             val enemy = Enemy(spawnPosition)
             GameObjectManager.addGameObject(enemy)
-            Log.d("Enemy","Enemy Spawned")
+         //   Log.d("Enemy","Enemy Spawned")
         }
     }
 

@@ -11,6 +11,8 @@ import kotlin.math.sqrt
 import android.view.KeyEvent
 import androidx.core.view.KeyEventDispatcher.dispatchKeyEvent
 import android.app.Activity
+import com.example.projectpolygondiver.Sensors.TiltSensorManager
+
 //import java.lang.ref.WeakReference
 
 object InputManager : View.OnTouchListener {
@@ -18,11 +20,14 @@ object InputManager : View.OnTouchListener {
     private var isTouching = false
     private var screenCenter = Vector2f() // Center of the screen
     private var currentTouchPosition = Vector2f()
+    public lateinit var tiltSensorManager : TiltSensorManager;
     //private var activity: WeakReference<Activity>? = null
     // Sensitivity and speed cap
     private val sensitivity = 0.01f
     private var currentVelocity = Vector3f()
-
+    // ✅ New variables to control tilt detection
+    var TriggerTiltReset = false
+    var isDetectingTilt = false // Flag to track if tilt detection should be active
 //    // Function to initialize the InputManager with the activity
 //    fun setActivity(currentActivity: Activity) {
 //        activity = WeakReference(currentActivity)
@@ -36,13 +41,17 @@ object InputManager : View.OnTouchListener {
         when (event.action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                 isTouching = true
+                isDetectingTilt = true
                 currentTouchPosition.set(event.x, event.y)
+
                 processTouchInput()
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isTouching = false
+                isDetectingTilt = false
                 currentVelocity.set(0f, 0f, 0f) // Stop movement when touch is released
+                tiltSensorManager.resetRequested = false
             }
         }
         return true
@@ -79,6 +88,13 @@ object InputManager : View.OnTouchListener {
     fun update(deltaTime: Float) {
         if (isTouching) {
             val movement = Vector3f(currentVelocity)
+
+           if(!TriggerTiltReset)
+           {
+               TriggerTiltReset=true;
+               tiltSensorManager.ResetOrientation()
+           }
+
 
             // Move camera
             CameraManager.move(movement)

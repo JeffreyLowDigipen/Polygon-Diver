@@ -65,7 +65,7 @@ object CameraManager {
         val heightInWorldUnits  = (2 * tan((fovRadians / 2).toDouble()) * cameraDistance).toFloat() *2f
         val widthInWorldUnits = heightInWorldUnits * aspectRatio
 
-        Log.d("CameraDebug", "Background Scale -> Width: $widthInWorldUnits, Height: $heightInWorldUnits")
+        //Log.d("CameraDebug", "Background Scale -> Width: $widthInWorldUnits, Height: $heightInWorldUnits")
         return Vector3f(widthInWorldUnits, heightInWorldUnits, 1f)
     }
 

@@ -1,6 +1,6 @@
 package com.example.projectpolygondiver.OpenGLActivity
 
-import TiltDetector
+import com.example.projectpolygondiver.Sensors.TiltSensorManager
 import android.content.Context
 import android.graphics.Color
 import android.opengl.GLSurfaceView
@@ -25,16 +25,17 @@ import org.joml.Vector3f
 
 class OpenGLES20Activity : AppCompatActivity() {
 
-    private lateinit var tiltDetector: TiltDetector
+  //  private lateinit var tiltDetector: SensorTiltActivity
     private lateinit var gLView: MyGLSurfaceView
     private lateinit var fpsTextView: TextView
     private val handler = Handler(Looper.getMainLooper())
+    private lateinit var tiltSensorManager: TiltSensorManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Use the newly created XML layout
         setContentView(R.layout.activity_opengl)
-        tiltDetector = TiltDetector(this)
+       // tiltDetector = SensorTiltActivity(this)
         // Set up OpenGL surface view
         gLView = findViewById(R.id.glSurfaceView)
 
@@ -43,18 +44,22 @@ class OpenGLES20Activity : AppCompatActivity() {
 
         // Update the FPS display every second
         updateFPSTitle()
-
-
-    }
-    override fun onResume() {
-        super.onResume()
-        tiltDetector.startListening() // Start detecting tilt
+        // Initialize the tilt sensor manager
+        tiltSensorManager = TiltSensorManager(this)
+        InputManager.tiltSensorManager = tiltSensorManager
     }
 
     override fun onPause() {
         super.onPause()
-        tiltDetector.stopListening() // Stop detecting tilt
+        tiltSensorManager.stopListening() // Stop detecting tilt when activity is paused
     }
+
+    override fun onResume() {
+        super.onResume()
+        tiltSensorManager = TiltSensorManager(this) // Restart tilt detection when resumed
+    }
+
+
     private fun updateFPSTitle() {
         handler.postDelayed(object : Runnable {
             override fun run() {
@@ -98,6 +103,8 @@ class MyGLSurfaceView : GLSurfaceView {
         this.isFocusableInTouchMode=true
         this.requestFocus()
         setOnTouchListener(InputManager)
+
+
         Log.d("MyGLSurfaceView", "Renderer initialized successfully (from XML)")
     }
 
