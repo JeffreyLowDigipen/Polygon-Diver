@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.room.Relation
+import com.example.projectpolygondiver.Managers.GameObjectManager
 import kotlin.system.exitProcess
 
 @Composable
@@ -42,7 +44,10 @@ fun MainMenu(navController: NavController)
 
         Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally)
         {
-            Button(onClick = { navController.navigate("game")})
+            Button(onClick = {
+                navController.navigate("game")
+                                GameObjectManager.ReloadGame()})
+
             {
                 Text(text = "Start Game")
             }
@@ -54,26 +59,26 @@ fun MainMenu(navController: NavController)
                 Text(text = "Scoreboard")
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            //Spacer(modifier = Modifier.height(16.dp))
 
-            Button(onClick = { navController.navigate("tutorial") })
-            {
-                Text(text = "Tutorial")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = { navController.navigate("Credits") })
-            {
-                Text(text = "Credits")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = { navController.navigate("settings") })
-            {
-                Text(text = "Settings")
-            }
+//            Button(onClick = { navController.navigate("tutorial") })
+//            {
+//                Text(text = "Tutorial")
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Button(onClick = { navController.navigate("Credits") })
+//            {
+//                Text(text = "Credits")
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Button(onClick = { navController.navigate("settings") })
+//            {
+//                Text(text = "Settings")
+//            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -56,40 +56,42 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         val currentTime = System.currentTimeMillis()
 
         var deltaTime = (currentTime - lastFrameTime) / 1000f
-        if(deltaTime<0)
-            deltaTime=0f// Convert nanoseconds to seconds
+        if (deltaTime < 0)
+            deltaTime = 0f// Convert nanoseconds to seconds
         lastFrameTime = currentTime
 
-        GameObjectManager.deltaTime=deltaTime;
+        GameObjectManager.deltaTime = deltaTime;
 
         GameObjectManager.PreUpdateAddGO()
-  //      Log.d("MainActivity","Test")
+        //      Log.d("MainActivity","Test")
         InputManager.update(deltaTime);
 
 
         //Log.d ("Player" , "Player Pos: ${GameObjectManager.Player?.position?.x},${GameObjectManager.Player?.position?.y},${GameObjectManager.Player?.position?.z}")
-       // Log.d("CameraDebug", "background Position -> x: ${backgroundGO?.position?.x}, y: ${backgroundGO?.position?.y}, z: ${backgroundGO?.position?.z}")
-       // Log.d("CameraDebug", "Camera Position -> x: ${CameraManager.cameraPosition?.x}, y: ${CameraManager.cameraPosition?.y}, z: ${CameraManager.cameraPosition?.z}")
+        // Log.d("CameraDebug", "background Position -> x: ${backgroundGO?.position?.x}, y: ${backgroundGO?.position?.y}, z: ${backgroundGO?.position?.z}")
+        // Log.d("CameraDebug", "Camera Position -> x: ${CameraManager.cameraPosition?.x}, y: ${CameraManager.cameraPosition?.y}, z: ${CameraManager.cameraPosition?.z}")
         //Log.d("CameraDebug", "scale  -> x: ${backgroundGO?.scale?.x}, y: ${backgroundGO?.scale?.y}, z: ${backgroundGO?.scale?.z}")
         // Loop through all game objects and render them
         GameObjectManager.update(deltaTime);
         CameraManager.updateViewMatrix()
-        for (gameObject in GameObjectManager.getAllGameObjects()) {
+        if (!GameObjectManager.pauseGame){
+            for (gameObject in GameObjectManager.getAllGameObjects()) {
 
-            gameObject.update(deltaTime)
-        }
+                gameObject.update(deltaTime)
+            }
+    }
 
          GameObjectManager.checkCollisions()
 
         for (gameObject in GameObjectManager.getAllGameObjects()) {
             renderGameObject(gameObject)
         }
+        //Log.d ("GameObjectManager", "${GameObjectManager.getAllGameObjects().size}")
         GameObjectManager.removeGameObjectOnPostUpdate();
 
         // Update FPS counter
         GameObjectManager.frameCount++
         if (currentTime - GameObjectManager.lastTime >= 1000) {
-            GameObjectManager.fps = GameObjectManager.frameCount
             GameObjectManager.frameCount = 0
             GameObjectManager.lastTime = currentTime
         }

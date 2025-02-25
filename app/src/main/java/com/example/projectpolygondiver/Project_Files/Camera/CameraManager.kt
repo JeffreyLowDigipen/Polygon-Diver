@@ -22,6 +22,11 @@ object CameraManager {
     val viewMatrix = FloatArray(16)
     val projectionMatrix = FloatArray(16)
     var backgroundGO :GameObject ? = null
+    var screenWidth : Float =0f;
+    var screenHeight : Float=0f;
+
+    var backgroundScale : Vector3f = Vector3f(0f,0f,0f)
+    var RunBackgroundScaleCheckOnce : Boolean = false;
 
     private val scrollSpeed = Vector2f(0.1f, 0.1f)
     // Update view matrix
@@ -57,7 +62,15 @@ object CameraManager {
     }
 
     // Dynamically scale background to fit screen size using FOV and aspect ratio
-    fun getBackgroundScale(screenWidth: Int, screenHeight: Int): Vector3f {
+    fun CheckBackgroundScale(): Vector3f {
+
+       // Log.d("CameraDebug", "Background Scale -> Width: $backgroundScale.x, Height: $backgroundScale.y")
+        if(RunBackgroundScaleCheckOnce)
+            return backgroundScale;
+
+
+      //  Log.d("CameraDebug", "Changing Background Scale -> Width: $backgroundScale.x, Height: $backgroundScale.y")
+        RunBackgroundScaleCheckOnce=true;
         val cameraDistance = DEFAULT_CAMERA_DISTANCE
         val fovRadians = Math.toRadians(DEFAULT_FOV.toDouble()).toFloat()
 
@@ -65,8 +78,13 @@ object CameraManager {
         val heightInWorldUnits  = (2 * tan((fovRadians / 2).toDouble()) * cameraDistance).toFloat() *2f
         val widthInWorldUnits = heightInWorldUnits * aspectRatio
 
-        //Log.d("CameraDebug", "Background Scale -> Width: $widthInWorldUnits, Height: $heightInWorldUnits")
-        return Vector3f(widthInWorldUnits, heightInWorldUnits, 1f)
+
+
+        backgroundScale.x = widthInWorldUnits;
+        backgroundScale.y = heightInWorldUnits;
+        backgroundScale.z =1f
+
+        return backgroundScale
     }
 
     // Retrieve actual screen dimensions

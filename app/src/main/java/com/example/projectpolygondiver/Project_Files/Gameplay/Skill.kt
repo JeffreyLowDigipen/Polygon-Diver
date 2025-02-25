@@ -1,5 +1,6 @@
 package com.example.projectpolygondiver.GameObjects
 
+import android.app.Activity
 import com.example.projectpolygondiver.Managers.GameObjectManager
 import android.util.Log
 import org.joml.Vector3f
@@ -7,7 +8,7 @@ import org.joml.Vector3f
 class Skills {
 
     private var shrinkActive = false
-    private var shrinkDuration = 5f
+    private var shrinkDuration = 1f
     private var shrinkTimer = 0f
     private var shrinkSpeed = 100f
     private var shrinkPercentage = 0.5f // Default percentage (50% of the original scale)
@@ -16,15 +17,29 @@ class Skills {
     private val originalScales = mutableMapOf<GameObject, Vector3f>()
 
     // ✅ Direction tracking map
-    private val directionMap = mutableMapOf(
+    /*private val directionMap = mutableMapOf(
         "left" to 0,
-        "right" to 0,
-        "up" to 0,
-        "down" to 0
-    )
+        "right" to 1,
+        "up" to 2,
+        "down" to 3
+    )*/
 
-    public var directionCheckTimer = 0f // Timer for checking directions
-    private val directionCheckInterval = 5f // Interval to check every 5 seconds
+    val arrowSequenceContainer = mutableListOf<String>() // Stores sequence of directions
+    private var currentInputIndex = 0 // Tracks player's progress through the sequence
+
+    var onArrowHighlight: ((String) -> Unit)? = null // Callback for UI updates
+
+    init {
+        generateArrowSequence() // Generate initial sequence
+    }
+
+    // Generate a random sequence of directions
+    private fun generateArrowSequence() {
+        arrowSequenceContainer.clear()
+        val directions = listOf("up", "down", "left", "right")
+        repeat(4) { arrowSequenceContainer.add(directions.random()) } // Generate 4 random directions
+        Log.d("ArrowSequence", "Generated sequence: $arrowSequenceContainer")
+    }
 
     // Function to activate shrinking for all enemies with a percentage
     fun activateShrink(duration: Float, percentage: Float, shrinkSpeed: Float) {
@@ -51,13 +66,6 @@ class Skills {
 
     // Function to be called from the main update loop
     fun update(deltaTime: Float) {
-
-
-        if (directionCheckTimer >= directionCheckInterval) {
-            checkDirections()
-            directionCheckTimer = 0f // Reset timer after checking
-        }
-
         // Disable shrinking after duration ends
         if (shrinkTimer >= shrinkDuration) {
             shrinkActive = false
@@ -68,7 +76,6 @@ class Skills {
         if (!shrinkActive) return
 
         shrinkTimer += deltaTime
-        directionCheckTimer += deltaTime
 
         // Shrink all enemies
         for ((enemy, originalScale) in originalScales) {
@@ -79,33 +86,47 @@ class Skills {
             )
             shrinkEnemy(enemy, targetScale, shrinkSpeed * deltaTime)
         }
-
-
     }
 
+    // Validate player input against the sequence
+    fun inputDirection(direction: String) {
+        if (direction == arrowSequenceContainer.getOrNull(currentInputIndex)) {
+            onArrowHighlight?.invoke(direction) // Highlight the corresponding arrow
+            currentInputIndex++
 
-    private fun checkDirections() : Boolean {
-        val allTriggered = directionMap.values.all { it == 1 }
-        if (allTriggered) {
-            Log.d("DirectionCheck", "All directions triggered within 5 seconds!")
-            return true
+            if (currentInputIndex >= arrowSequenceContainer.size) {
+                Log.d("SequenceComplete", "Player completed the sequence!")
+                resetSequence()
+            }
         } else {
-
-            Log.d("DirectionCheck", "Not all directions were triggered. Resetting...")
-            return false
+            Log.d("IncorrectTilt", "Wrong direction! Restarting sequence.")
+            resetSequence()
         }
-
-        // Reset all directions after check
-        directionMap.keys.forEach { directionMap[it] = 0 }
     }
 
-    // ✅ Function to mark a direction as triggered (can be called from tilt detection)
-    fun markDirection(direction: String) {
+    // Reset the sequence for a new round
+    private fun resetSequence() {
+        currentInputIndex = 0
+        generateArrowSequence()
+    }
+
+    // Get the current sequence for UI rendering
+    fun getArrowSequence(): List<String> {
+        return arrowSequenceContainer
+    }
+
+    // Function to mark a direction as triggered (can be called from tilt detection)
+    /*fun markDirection(direction: String) {
         if (directionMap.containsKey(direction)) {
             directionMap[direction] = 1
             Log.d("DirectionTriggered", "$direction marked as triggered.")
         }
     }
+
+    fun resetDirections()
+    {
+        directionMap.keys.forEach { directionMap[it] = 0}
+    }*/
 
     // Smoothly shrink an enemy toward the target percentage of its original scale
     private fun shrinkEnemy(enemy: GameObject, targetScale: Vector3f, shrinkAmount: Float) {

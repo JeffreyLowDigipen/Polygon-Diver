@@ -1,5 +1,6 @@
 package com.example.projectpolygondiver.GameObjects
 
+import android.util.Log
 import com.example.projectpolygondiver.Managers.GameObjectManager
 import org.joml.Vector3f
 import kotlin.math.atan2
@@ -11,7 +12,7 @@ class Enemy(startPosition: Vector3f, changeto3D : Boolean) : GameObject() {
     init {
         position = startPosition
         scale = Vector3f(1f, 1f, 1f)
-        color = Vector3f(0f, 0f, 0f) // Red color
+        color = Vector3f(1f, 0f, 0f) // Red color
         if(!changeto3D) {
             modelName = "plane"
             textureName = "virus"
@@ -24,7 +25,7 @@ class Enemy(startPosition: Vector3f, changeto3D : Boolean) : GameObject() {
             color = Vector3f(1f,1f,1f)
         }
         ChangeTo3D=changeto3D
-        movementSpeed = 0.5f
+        movementSpeed =1f
         type = GOType.ENEMY
     }
 
@@ -33,14 +34,17 @@ class Enemy(startPosition: Vector3f, changeto3D : Boolean) : GameObject() {
 
         // Move towards the player
         val playerPos = GameObjectManager.Player?.position
+
         if (playerPos != null) {
+           // Log.d("test","test")
             val direction = Vector3f(playerPos).sub(position).normalize()
             position.add(direction.mul(movementSpeed * deltaTime))
-
+           // Log.d ("Enemy" ,"position: ${position.x},${position.y},${position.z}")
             //  Rotate toward the player
           if(ChangeTo3D)
                 rotateTowardsPlayer(playerPos)
         }
+
         super.update(deltaTime)
     }
 

@@ -15,7 +15,6 @@ class Bullet(
     private val lifespan = 2f // Bullet lasts for 5 seconds
     private var timeAlive = 0f
     private var piercingValue=0
-    private var player = Player()
 
     init {
         modelName = "plane"

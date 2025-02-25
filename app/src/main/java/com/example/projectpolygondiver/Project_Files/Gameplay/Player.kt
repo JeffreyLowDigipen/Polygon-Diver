@@ -4,6 +4,10 @@ import com.example.projectpolygondiver.Managers.GameObjectManager
 import android.util.Log
 import org.joml.Vector3f
 
+interface PlayerDeathListener {
+    fun onPlayerDeath()
+}
+
 class Player : GameObject() {
 
     private val bulletCooldown = 0.3f
@@ -20,11 +24,17 @@ class Player : GameObject() {
 
 
     public var score: Int = 0
-    public var targetScoreTo3D = 5
+    public var targetScoreTo3D = 25
     public var changeTo3D = false
     public val skill: Skills = Skills()
 
-    override fun update(deltaTime: Float) {
+    private var deathListener: PlayerDeathListener? = null
+
+    fun setDeathListener(listener: PlayerDeathListener) {
+        deathListener = listener
+
+    }
+        override fun update(deltaTime: Float) {
         super.update(deltaTime)
 
 
@@ -74,8 +84,9 @@ class Player : GameObject() {
 
 
     private fun onDeath() {
-        Log.d("Player", "Player has died. Resetting game or triggering game over logic.")
+       Log.d("Player", "Player has died. Resetting game or triggering game over logic.")
         // Add game-over logic here if needed
+        deathListener?.onPlayerDeath()
     }
 
 
@@ -114,6 +125,5 @@ class Player : GameObject() {
         GameObjectManager.enemySpawner.changeTo3D = true
         changeTo3D = true
         rotation = Vector3f(90f, 0f, 0f)
-
     }
 }

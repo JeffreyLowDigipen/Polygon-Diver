@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,10 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,11 +48,19 @@ fun Leaderboard_Page(navController: NavController, context: Context = LocalConte
     val viewModel: PlayerScoreViewModel = viewModel(factory = PlayerScoreViewModelFactory(repository))
     val scores = viewModel.scores.observeAsState(initial = emptyList())
 
-    Column(modifier = Modifier
+    Column(modifier = Modifier.background(
+        brush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF4CAF50), Color(0xFFFFEB3B)) // Dark gray to green gradient
+        )
+    )
         .fillMaxSize()
         .padding(16.dp))
     {
-        Text("Leaderboard", style = MaterialTheme.typography.headlineLarge)
+        Text("Leaderboard", style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier
+                .padding(vertical = 32.dp) // Add space around the text
+                .align(Alignment.CenterHorizontally), // Center the text horizontally
+            textAlign = TextAlign.Center)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -65,9 +76,9 @@ fun Leaderboard_Page(navController: NavController, context: Context = LocalConte
 
         Row(modifier = Modifier.fillMaxWidth().weight(0.25f),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center)
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween)
         {
-            Button(onClick = { viewModel.clearScores() })
+            Button(onClick = { viewModel.clearScores() }    )
             {
                 Text(text = "Clear Scores")
             }
@@ -106,7 +117,7 @@ fun ScoreCanvasItem(score: PlayerScore)
     {
         drawRect(color = Color.Gray, size = size)
         val textPaint = android.graphics.Paint().apply {
-            color = android.graphics.Color.LTGRAY
+            color = android.graphics.Color.GREEN
             this.textSize = textSize
         }
 
