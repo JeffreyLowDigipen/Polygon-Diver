@@ -9,9 +9,13 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ComponentActivity
 import androidx.core.content.ContextCompat
+import com.example.projectpolygondiver.AppNavHost
 import com.example.projectpolygondiver.GameObjects.GameObject
 import com.example.projectpolygondiver.GameObjects.Player
 import com.example.projectpolygondiver.Graphics.*
@@ -19,7 +23,7 @@ import com.example.projectpolygondiver.Managers.*
 import org.joml.Vector3f
 import kotlinx.coroutines.CompletableDeferred
 import com.example.projectpolygondiver.OpenGLActivity.*
-
+import com.example.projectpolygondiver.Project_Files.Gameplay.GameState
 
 class MainActivity : AppCompatActivity() {
     private val STORAGE_PERMISSION_CODE = 1001
@@ -27,10 +31,17 @@ class MainActivity : AppCompatActivity() {
     // Deferred variable to wait for OpenGL context initialization
     private val openGLInitialized = CompletableDeferred<Unit>()
 
+    var initialised = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "Launch OPENGL")
 
+        setContent {
+            MaterialTheme {
+                AppNavHost()
+            }
+        }
 
         // Request permission first
         if (checkStoragePermission()) {
@@ -84,16 +95,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeGame() {
-
-        initializeGameAssets()
-
+        if(!initialised)
+        {
+            initializeGameAssets()
+        }
     }
 
     fun initializeGameAssets() {
-
+        Log.d("GameInit", "Initializing game assets...")
         // val objLoader = OBJLoader(this@MainActivity)
         //objLoader.Init()
         //  objLoader.generatePrimitiveCube()
+
+        if(initialised)
+        {
+            Log.d("MainActivity", "Already initialised")
+            return
+        }
 
         val (screenWidth, screenHeight) = CameraManager.getScreenDimensions(this@MainActivity)
         val backgroundScale = CameraManager.getBackgroundScale(screenWidth, screenHeight)
@@ -135,28 +153,10 @@ class MainActivity : AppCompatActivity() {
         GameObjectManager.addGameObject(background)
 
         Log.d("MainActivity", "Assets loaded and objects added successfully.")
-        launchOpenGLActivity()
-    }
 
-    private fun launchOpenGLActivity() {
-        val intent = Intent(this, OpenGLES20Activity::class.java)
-        startActivity(intent)
-        finish()
-    }
-
-    // Function to simulate a key press safely
-    fun simulateKeyPress(keyCode: Int) {
-
-
-        if (this != null) {
-            val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, keyCode)
-            val upEvent = KeyEvent(KeyEvent.ACTION_UP, keyCode)
-
-            this.dispatchKeyEvent(downEvent)
-            this.dispatchKeyEvent(upEvent)
-        } else {
-            Log.e("InputManager", "Activity reference lost. Cannot simulate key press.")
-        }
+        initialised = true
+        openGLInitialized.complete(Unit)
+        //launchOpenGLActivity()
     }
 }
 
