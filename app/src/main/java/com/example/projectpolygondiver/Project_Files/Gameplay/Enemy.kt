@@ -21,6 +21,7 @@ class Enemy(startPosition: Vector3f, changeto3D : Boolean) : GameObject() {
             modelName = "robot"
             textureName = "robot"
             scale = Vector3f(0.6f, 0.6f, 0.6f)
+            color = Vector3f(1f,1f,1f)
         }
         ChangeTo3D=changeto3D
         movementSpeed = 0.5f
@@ -77,6 +78,11 @@ class Enemy(startPosition: Vector3f, changeto3D : Boolean) : GameObject() {
     override fun onCollision(other: GameObject) {
         if (other is Bullet) {
             GameObjectManager.removeGameObject(this) // Destroy enemy on bullet hit
+        }
+        if (other is Player)
+        {
+            val player = GameObjectManager.Player as Player
+            player.takeDamage(1);
         }
     }
 }

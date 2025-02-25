@@ -1,123 +1,119 @@
 package com.example.projectpolygondiver.GameObjects
 
-import org.joml.Vector3f
 import com.example.projectpolygondiver.Managers.GameObjectManager
 import android.util.Log
-import java.lang.Math.toDegrees
-import kotlin.math.asin
-import kotlin.math.atan2
+import org.joml.Vector3f
 
 class Player : GameObject() {
 
-    private val bulletCooldown = 0.3f // Time between shots
+    private val bulletCooldown = 0.3f
     private var timeSinceLastShot = 0f
-    private var lastMoveDirection = Vector3f(0f, -1f, 0f) // Default shooting upwards
+    private var lastMoveDirection = Vector3f(0f, -1f, 0f)
     private var targetYaw: Float = 0f
 
-    public var score : Int = 0;
-    public var targetScoreTo3D = 5;
-    public var changeTo3D=false;
-    public val skill:Skills =Skills()
-//    init {
-//        //modelName = "plane"
-//        position = Vector3f(0f, 0f, 0f) // Spawn player near the bottom
-//        scale = Vector3f(0.5f, 0.5f, 0.5f)
-//        color = Vector3f(0f, 0.5f, 1f) // Light blue color
-//        movementSpeed=200f
-//    }
+    //  Health and Invulnerability Variables
+    var health = 3 // Starting health
+    private var isInvulnerable = false
+    private var invulnerabilityTimer = 0f
+    private val invulnerabilityDuration = 2f // 2 seconds of invulnerability
+    private val speedBoostMultiplier = 1.5f // Increase speed during invulnerability
+
+
+    public var score: Int = 0
+    public var targetScoreTo3D = 5
+    public var changeTo3D = false
+    public val skill: Skills = Skills()
 
     override fun update(deltaTime: Float) {
-
-
-//        // Make the model face the direction you're moving/looking
-//        if (lastMoveDirection.length() > 0) {
-//            if (lastMoveDirection.length() > 0.01f) {
-//                // Rotate smoothly on Y-axis based on the direction
-//                val targetYaw = computeTopDownYaw(lastMoveDirection)
-//                val yawDifference = ((targetYaw - rotation.y + 540f) % 360f) - 180f
-//                rotation.y += yawDifference * (5f * deltaTime) // Smooth rotation with speed factor
-//            }
-//        }
-
-
         super.update(deltaTime)
-        if(changeTo3D)
-            rotateTowardsTarget(deltaTime)
 
+
+        if (isInvulnerable) {
+            invulnerabilityTimer += deltaTime
+            renderActive=!renderActive;
+            if (invulnerabilityTimer >= invulnerabilityDuration) {
+                isInvulnerable = false
+                movementSpeed /= speedBoostMultiplier // Reset speed
+                renderActive=true
+                Log.d("Player", "Invulnerability ended. Speed reset.")
+            }
+        }
+
+        if (changeTo3D) rotateTowardsTarget(deltaTime)
 
         timeSinceLastShot += deltaTime
-       // Log.d ("Player","timeSinceLastShot: $timeSinceLastShot")
-        // Continuously shoot in the last direction after the cooldown
-        if (timeSinceLastShot >= bulletCooldown || timeSinceLastShot <-1) {
-            shoot()
-            //Log.d("Player" ,"Last moved Direction: ${lastMoveDirection.x},${lastMoveDirection.y}")
-            timeSinceLastShot = 0f // Reset cooldown
-        }
-        skill.update(deltaTime)
 
-      //  rotation.x+=1;
-       // rotation.y +=1;
-        //rotation.z +=1;
+        if (timeSinceLastShot >= bulletCooldown || timeSinceLastShot < -1) {
+            shoot()
+            timeSinceLastShot = 0f
+        }
+
+        skill.update(deltaTime)
     }
-    // Function to set the target rotation based on touch input
+
+
+    fun takeDamage(amount: Int) {
+        if (!isInvulnerable) {
+            health -= amount
+            Log.d("Player", "Took damage! Remaining health: $health")
+
+            // Activate invulnerability
+            isInvulnerable = true
+            invulnerabilityTimer = 0f
+            movementSpeed *= speedBoostMultiplier // Boost movement speed during invulnerability
+            Log.d("Player", "Invulnerability activated! Speed boosted.")
+            scale.mul(0.7f)
+            // Check if health is zero or below
+            if (health <= 0) {
+                onDeath()
+            }
+        } else {
+            Log.d("Player", "Damage ignored due to invulnerability.")
+        }
+    }
+
+
+    private fun onDeath() {
+        Log.d("Player", "Player has died. Resetting game or triggering game over logic.")
+        // Add game-over logic here if needed
+    }
+
+
+    fun onMove(direction: Vector3f) {
+        if (direction.length() > 0f) {
+            position.add(direction)
+            lastMoveDirection.set(direction.normalize())
+        }
+    }
+
+
+    private fun shoot() {
+        val bullet = Bullet(Vector3f(position), Vector3f(lastMoveDirection), 10f, changeTo3D)
+        GameObjectManager.addGameObject(bullet)
+    }
+
+
     fun setTargetRotation(yaw: Float) {
         targetYaw = yaw
     }
 
-    // Smoothly rotate toward the target yaw
     fun rotateTowardsTarget(deltaTime: Float) {
-        val rotationSpeed = 5f // Rotation speed factor
-
-        // Calculate shortest rotation distance
+        val rotationSpeed = 5f
         val yawDifference = ((targetYaw - rotation.y + 540f) % 360f) - 180f
-       // Log.d("Player" , "$yawDifference")
-        // Smoothly interpolate the rotation
         rotation.y += yawDifference * rotationSpeed * deltaTime
 
-        // Ensure rotation remains within 0-360 degrees
         if (rotation.y >= 360f) rotation.y -= 360f
         if (rotation.y < 0f) rotation.y += 360f
     }
 
-    // Call this function externally when the player moves
-    fun onMove(direction: Vector3f) {
-        if (direction.length() > 0f) { // Check if the movement vector is valid
-            position.add(direction)
-            lastMoveDirection.set(direction.normalize()) // Update last movement direction
 
-        }
-
-
-    }
-
-    private fun shoot() {
-        val bullet = Bullet(Vector3f(position), Vector3f(lastMoveDirection),10f,changeTo3D) // Shoot in the last movement direction
-        GameObjectManager.addGameObject(bullet)
-       // Log.d("Player", "Shot fired from position: ${position.x}, ${position.y}, ${position.z} towards direction: $lastMoveDirection")
-    }
-    // Function to rotate the model towards a direction
-    private fun faceDirection(direction: Vector3f) {
-        // Normalize the direction vector
-        val normalizedDirection = direction.normalize()
-
-        // Calculate yaw (rotation around Y-axis)
-        val yaw = Math.toDegrees(
-            atan2(
-                normalizedDirection.x.toDouble(),
-                normalizedDirection.z.toDouble()
-            )
-        ).toFloat()
-
-        // Calculate pitch (rotation around X-axis)
-        val pitch = Math.toDegrees(asin(-normalizedDirection.y.toDouble())).toFloat()
-    }
-    fun ChangePlayerTo3D()
-    {
-        textureName="robot2"
-        modelName="robot2"
+    fun ChangePlayerTo3D() {
+        textureName = "robot2"
+        modelName = "robot2"
         scale = Vector3f(0.07f, 0.07f, 0.07f)
-        GameObjectManager.enemySpawner.changeTo3D=true;
-        changeTo3D=true;
+        GameObjectManager.enemySpawner.changeTo3D = true
+        changeTo3D = true
         rotation = Vector3f(90f, 0f, 0f)
+
     }
 }

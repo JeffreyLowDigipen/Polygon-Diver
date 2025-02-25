@@ -14,7 +14,7 @@ object GameObjectManager {
     public var frameCount = 0
     public var fps = 0
     public var lastTime = System.currentTimeMillis()
-
+    public var pauseGame =  false
     var Player: GameObject? = null
     val camera = CameraManager
 

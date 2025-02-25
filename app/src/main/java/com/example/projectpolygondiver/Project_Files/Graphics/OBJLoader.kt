@@ -186,7 +186,8 @@ class OBJLoader(private val context: Context) {
         }
 
         // Decode the bitmap from the asset folder
-        val bitmap = BitmapFactory.decodeStream(context.assets.open(textureFile))
+        val bitmap = BitmapFactory.decodeStream(context.assets.open(textureFile)).copy(Bitmap.Config.ARGB_8888, true)
+
         val flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, Matrix().apply {
             preScale(1f, -1f) // Flip vertically for OpenGL
         }, true)

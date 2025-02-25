@@ -14,7 +14,7 @@ class Bullet(
 
     private val lifespan = 5f // Bullet lasts for 5 seconds
     private var timeAlive = 0f
-
+    private var piercingValue=0
     private var player = Player()
 
     init {
@@ -23,7 +23,8 @@ class Bullet(
 
         if(changeTo3D) {
             scale = Vector3f(0.4f, 0.4f, 0.4f) // Small bullet
-            color = Vector3f(1f, 0f, 0f) // Red bullet
+            color = Vector3f(1f, 1f, 0f)
+            piercingValue=1
         }
         else
         {
@@ -55,7 +56,11 @@ class Bullet(
 
             if(other.type==GOType.ENEMY)
             {
-                GameObjectManager.removeGameObject(this)
+                if(piercingValue<=0) {
+                    GameObjectManager.removeGameObject(this)
+                    --piercingValue
+                }
+
                 val player = GameObjectManager.Player as? Player
                 if(player !=null)
                 {

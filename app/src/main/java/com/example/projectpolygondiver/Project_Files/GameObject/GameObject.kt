@@ -27,6 +27,7 @@ open class GameObject {
     var modelName : String ="";
     var textureName : String = "";
     var active : Boolean = false;
+    var renderActive :Boolean = true;
     var textureOffset: Vector2f = Vector2f(0f, 0f)
     var type : GOType = GOType.DEFAULT
     public var movementSpeed = 10f;

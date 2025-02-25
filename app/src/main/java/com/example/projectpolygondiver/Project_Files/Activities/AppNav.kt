@@ -22,7 +22,7 @@ fun AppNavHost()
     NavHost(navController = navController, startDestination = "mainMenu")
     {
         composable("mainMenu") { MainMenu(navController) }
-        composable("game") { GameManager(gameState) }
+        composable("game") { GameManager() }
         composable("settings") { Settings(navController) }
         composable("Leaderboard") { Leaderboard_Page(navController, context = context) }
         composable("Credits") { Credits(navController) }

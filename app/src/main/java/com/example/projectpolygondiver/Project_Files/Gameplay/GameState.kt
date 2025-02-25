@@ -11,6 +11,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import com.example.projectpolygondiver.GameObjects.Player
 import com.example.projectpolygondiver.OpenGLActivity.OpenGLES20Activity
@@ -88,7 +90,11 @@ class GameState : AppCompatActivity()
 }
 
 @Composable
-fun GameManager(GameState: GameState)
-{
-    GameState.start()
+fun GameManager() {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        Log.d("GameManager", "Launching OpenGL Activity from Composable")
+        val intent = Intent(context, OpenGLES20Activity::class.java)
+        context.startActivity(intent)
+    }
 }

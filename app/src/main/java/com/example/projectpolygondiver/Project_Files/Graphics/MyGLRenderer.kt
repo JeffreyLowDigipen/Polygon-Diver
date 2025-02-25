@@ -32,7 +32,8 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
        // GLES30.glEnable(GLES30.GL_CULL_FACE)
         GLES30.glDisable(GLES30.GL_CULL_FACE) // Disable backface culling
         GLES30.glFrontFace(GLES30.GL_CCW) // Counter-clockwise winding order
-
+        GLES30.glEnable(GLES30.GL_BLEND)
+        GLES30.glBlendFunc(GLES30.GL_SRC_ALPHA, GLES30.GL_ONE_MINUS_SRC_ALPHA)
 
         // Initialize shaders and program
         val vertexShaderCode = loadShaderFromAssets("Shaders/default_vertex_shader.glsl")
@@ -98,7 +99,7 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
     // Function to render a game object using its model and texture or color
     private fun renderGameObject(gameObject: GameObject) {
 
-        if (!gameObject.active) return
+        if (!gameObject.active || !gameObject.renderActive) return
 
         // Retrieve model and texture from OBJLoader cache
         val vertices = OBJLoader.modelVertices[gameObject.modelName]
@@ -181,6 +182,10 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
             GLES30.glEnableVertexAttribArray(normalHandle)
             GLES30.glVertexAttribPointer(normalHandle, 3, GLES30.GL_FLOAT, false, 0, normals)
         }
+
+        // Pass alpha value for solid color rendering
+        val alphaHandle = GLES30.glGetUniformLocation(program, "u_Alpha")
+        GLES30.glUniform1f(alphaHandle, 0.5f) // 50% transparency
 
 
         // Set tint color (e.g., light red tint)

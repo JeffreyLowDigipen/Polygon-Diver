@@ -23,7 +23,7 @@ import com.example.projectpolygondiver.Managers.*
 import org.joml.Vector3f
 import kotlinx.coroutines.CompletableDeferred
 import com.example.projectpolygondiver.OpenGLActivity.*
-import com.example.projectpolygondiver.Project_Files.Gameplay.GameState
+//import com.example.projectpolygondiver.Project_Files.Gameplay.GameState
 
 class MainActivity : AppCompatActivity() {
     private val STORAGE_PERMISSION_CODE = 1001
@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
             position = Vector3f(0f, 0f, 0f)
             rotation = Vector3f(0f, 0f, 0f)
             scale = Vector3f(1f, 1f, 1f)
-            color = Vector3f(1f, 1f, 1f)
+            color = Vector3f(0f, 0f, 0f)
             textureName = "microwave"
             type = GameObject.GOType.PLAYER
             movementSpeed = 3f
@@ -138,7 +138,7 @@ class MainActivity : AppCompatActivity() {
         val background = GameObject().apply {
             modelName = "plane"
             position = Vector3f(0f, 0f, -1f)
-            scale = backgroundScale.mul(5f);
+            scale = backgroundScale.mul(3f);
             color = Vector3f(0.01f, 0.01f, 0.01f)
             textureName = "background"
             type = GameObject.GOType.DEFAULT
@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity() {
 
         initialised = true
         openGLInitialized.complete(Unit)
-        //launchOpenGLActivity()
+       // launchOpenGLActivity()
     }
 }
 
