@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:alpha="50">
 
     <!-- OpenGL Surface View -->
     <com.example.projectpolygondiver.OpenGLActivity.MyGLSurfaceView
@@ -14,10 +16,32 @@
         android:id="@+id/fpsCounter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
         android:layout_margin="16dp"
+        android:background="@android:color/transparent"
         android:text="FPS: 0"
         android:textColor="@android:color/holo_blue_light"
-        android:textSize="16sp"
-        android:background="@android:color/transparent"
-        android:layout_gravity="top|end" />
+        android:textSize="16sp" />
+
+    <!-- Translucent Button -->
+    <Button
+        android:id="@+id/Stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="End"
+        android:textSize="11sp"
+        android:background="@android:color/background_dark"
+        android:alpha="0.60"
+        android:elevation="4dp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/darker_gray"
+        android:visibility="visible"
+        tools:visibility="visible" />
+
+    <!-- RecyclerView for the Score List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/score_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="100dp" />
 </FrameLayout>

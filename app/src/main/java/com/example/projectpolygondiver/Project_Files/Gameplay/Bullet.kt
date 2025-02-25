@@ -3,6 +3,7 @@ package com.example.projectpolygondiver.GameObjects
 import android.util.Log
 import org.joml.Vector3f
 import com.example.projectpolygondiver.Managers.GameObjectManager
+import com.example.projectpolygondiver.PlayerScoreViewModel
 
 class Bullet(
     startPosition: Vector3f,
@@ -13,6 +14,8 @@ class Bullet(
 
     private val lifespan = 5f // Bullet lasts for 5 seconds
     private var timeAlive = 0f
+
+    private var player = Player()
 
     init {
         modelName = "plane"
