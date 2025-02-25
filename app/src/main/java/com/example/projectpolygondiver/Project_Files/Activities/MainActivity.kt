@@ -147,11 +147,11 @@ class MainActivity : AppCompatActivity() {
         CameraManager.backgroundGO = background
 
 
-        GameObjectManager.addGameObject(player)
+
         //GameObjectManager.addGameObject(Enemy)
         GameObjectManager.Player = player
         GameObjectManager.addGameObject(background)
-
+        GameObjectManager.addGameObject(player)
         Log.d("MainActivity", "Assets loaded and objects added successfully.")
 
         initialised = true

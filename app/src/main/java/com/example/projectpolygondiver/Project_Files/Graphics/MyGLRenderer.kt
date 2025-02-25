@@ -30,7 +30,7 @@ class MyGLRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES30.glClearColor(0f, 0f, 0f, 1f)
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
        // GLES30.glEnable(GLES30.GL_CULL_FACE)
-        GLES30.glDisable(GLES30.GL_CULL_FACE) // Disable backface culling
+      //  GLES30.glDisable(GLES30.GL_CULL_FACE) // Disable backface culling
         GLES30.glFrontFace(GLES30.GL_CCW) // Counter-clockwise winding order
         GLES30.glEnable(GLES30.GL_BLEND)
         GLES30.glBlendFunc(GLES30.GL_SRC_ALPHA, GLES30.GL_ONE_MINUS_SRC_ALPHA)

@@ -12,7 +12,7 @@ class Bullet(
     changeTo3D : Boolean =false
 ) : GameObject() {
 
-    private val lifespan = 5f // Bullet lasts for 5 seconds
+    private val lifespan = 2f // Bullet lasts for 5 seconds
     private var timeAlive = 0f
     private var piercingValue=0
     private var player = Player()

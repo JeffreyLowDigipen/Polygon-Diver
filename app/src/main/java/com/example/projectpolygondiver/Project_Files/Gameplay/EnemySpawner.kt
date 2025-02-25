@@ -9,7 +9,7 @@ object EnemySpawner {
     public var spawnCooldown = 3f // Time interval between spawns (in seconds)
     public var timeSinceLastSpawn = 2f
     public val enemiesPerSpawn = 5 // Number of enemies to spawn at once
-    public val spawnDistanceMultiplier = 0.6f // Distance factor outside of the screen
+    public val spawnDistanceMultiplier = 0.3f // Distance factor outside of the screen
     public var changeTo3D : Boolean =false;
     fun update(deltaTime: Float) {
         timeSinceLastSpawn += deltaTime
